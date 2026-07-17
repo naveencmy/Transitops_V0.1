@@ -1,18 +1,79 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShieldCheck, TriangleAlert as AlertTriangle, Clock, FileCheck } from 'lucide-react';
-import { mockCompliance, mockDrivers } from '../data/mockData';
 import { PageHeader, Badge, Card, StatCard } from '../components/ui';
 import { formatDate } from '../services/format';
+import { driverService } from '../services/driverService';
+import type { Driver, ComplianceItem } from '../types';
+
+function generateComplianceFromDrivers(drivers: Driver[]): ComplianceItem[] {
+  const items: ComplianceItem[] = [];
+  const now = new Date();
+  const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+  drivers.forEach((driver) => {
+    if (driver.licenseExpiry) {
+      const expiryDate = new Date(driver.licenseExpiry);
+      let status: ComplianceItem['status'] = 'Compliant';
+      if (expiryDate < now) {
+        status = 'Expired';
+      } else if (expiryDate < thirtyDays) {
+        status = 'Expiring Soon';
+      } else if (expiryDate < ninetyDays) {
+        status = 'Expiring Soon';
+      }
+      items.push({
+        id: `C-${driver.id}-LIC`,
+        driverId: driver.id,
+        category: 'License',
+        title: 'CDL Renewal',
+        status,
+        dueDate: driver.licenseExpiry,
+        notes: status === 'Expired' ? 'License expired - renewal required' : `Valid through ${formatDate(driver.licenseExpiry)}`,
+      });
+    }
+  });
+
+  return items;
+}
 
 export default function Compliance() {
+  const [compliance, setCompliance] = useState<ComplianceItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
-  const filtered = filter === 'All' ? mockCompliance : mockCompliance.filter((r) => r.status === filter);
-  const driverName = (id: string) => mockDrivers.find((d) => d.id === id)?.name ?? '—';
 
-  const compliant = mockCompliance.filter((r) => r.status === 'Compliant').length;
-  const expiring = mockCompliance.filter((r) => r.status === 'Expiring Soon').length;
-  const expired = mockCompliance.filter((r) => r.status === 'Expired').length;
-  const pending = mockCompliance.filter((r) => r.status === 'Pending Review').length;
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const drivers = await driverService.getDrivers();
+        const items = generateComplianceFromDrivers(drivers);
+        setCompliance(items);
+      } catch (err) {
+        console.error('Failed to load compliance data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const filtered = filter === 'All' ? compliance : compliance.filter((r) => r.status === filter);
+
+  const compliant = compliance.filter((r) => r.status === 'Compliant').length;
+  const expiring = compliance.filter((r) => r.status === 'Expiring Soon').length;
+  const expired = compliance.filter((r) => r.status === 'Expired').length;
+  const pending = compliance.filter((r) => r.status === 'Pending Review').length;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Compliance" subtitle="Loading..." />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-sm text-slate-400">Loading compliance data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -49,7 +110,7 @@ export default function Compliance() {
               {filtered.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/70">
                   <td className="px-5 py-3.5 font-medium text-slate-800">{r.id}</td>
-                  <td className="px-5 py-3.5 text-slate-600">{driverName(r.driverId)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{r.driverId}</td>
                   <td className="px-5 py-3.5 text-slate-600">{r.category}</td>
                   <td className="px-5 py-3.5 text-slate-600">{r.title}</td>
                   <td className="px-5 py-3.5 text-slate-600">{formatDate(r.dueDate)}</td>

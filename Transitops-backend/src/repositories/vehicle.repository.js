@@ -64,12 +64,13 @@ class VehicleRepository {
   }
 
   async update(id, updates) {
+    const ALLOWED_COLUMNS = ['name', 'model', 'type', 'max_load_capacity_kg', 'odometer_km', 'acquisition_cost'];
     const fields = [];
     const values = [];
     let idx = 1;
 
     for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
+      if (value !== undefined && ALLOWED_COLUMNS.includes(key)) {
         fields.push(`${key} = $${idx++}`);
         values.push(value);
       }
@@ -94,7 +95,7 @@ class VehicleRepository {
   }
 
   async updateStatus(id, status, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const result = await executor(`
       UPDATE vehicles SET status = $1, updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
@@ -104,7 +105,7 @@ class VehicleRepository {
   }
 
   async updateOdometer(id, odometerKm, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const result = await executor(`
       UPDATE vehicles SET odometer_km = $1, updated_at = CURRENT_TIMESTAMP
       WHERE id = $2

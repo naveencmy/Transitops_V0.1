@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Bell, Shield, Building2, Save, Users as UsersIcon, Plus, Pencil, Trash2, X } from 'lucide-react';
 import { PageHeader, Card, Button, Input, Badge } from '../components/ui';
 import { authService, userService } from '../services/authService';
@@ -120,7 +120,7 @@ function SecurityTab() {
 }
 
 function UsersTab() {
-  const [users, setUsers] = useState<AppUser[]>(userService.getUsers());
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState<Role>('Dispatcher');
@@ -130,10 +130,27 @@ function UsersTab() {
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<Role>('Dispatcher');
 
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const loadedUsers = await userService.getUsers();
+      setUsers(loadedUsers);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
   const openEdit = (u: AppUser) => { setEditing(u); setEditName(u.name); setEditRole(u.role); };
-  const saveEdit = () => { if (!editing) return; userService.updateUserName(editing.id, editName); setUsers(userService.updateUserRole(editing.id, editRole)); setEditing(null); };
-  const confirmDelete = () => { if (!deleteId) return; setUsers(userService.deleteUser(deleteId)); setDeleteId(null); };
-  const handleAdd = () => { if (!newName || !newEmail) return; setUsers(userService.addUser(newName, newEmail, newRole)); setNewName(''); setNewEmail(''); setNewRole('Dispatcher'); setAddOpen(false); };
+  const saveEdit = async () => { if (!editing) return; await userService.updateUserName(editing.id, editName); await userService.updateUserRole(editing.id, editRole); await loadUsers(); setEditing(null); };
+  const confirmDelete = async () => { if (!deleteId) return; await userService.deleteUser(deleteId); await loadUsers(); setDeleteId(null); };
+  const handleAdd = async () => { if (!newName || !newEmail) return; await userService.addUser(newName, newEmail, newRole); await loadUsers(); setNewName(''); setNewEmail(''); setNewRole('Dispatcher'); setAddOpen(false); };
+
+  if (users.length === 0) {
+    return <div className="p-6 text-center text-slate-500">Loading users...</div>;
+  }
 
   return (
     <Card title="User & Role Management" action={<Button size="sm" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add User</Button>}>

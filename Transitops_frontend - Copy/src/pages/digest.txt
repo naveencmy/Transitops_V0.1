@@ -1,0 +1,1438 @@
+Directory structure:
+└── pages/
+    ├── Analytics.tsx
+    ├── Compliance.tsx
+    ├── Dashboard.tsx
+    ├── Drivers.tsx
+    ├── Fleet.tsx
+    ├── FuelExpenses.tsx
+    ├── Login.tsx
+    ├── Maintenance.tsx
+    ├── Settings.tsx
+    └── Trips.tsx
+
+================================================
+FILE: Analytics.tsx
+================================================
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { monthlyRevenue, fleetUtilization, fuelTrend, mockTrips } from '../data/mockData';
+import { PageHeader, Card, StatCard } from '../components/ui';
+import { formatNumber } from '../services/format';
+import { TrendingUp, TrendingDown, DollarSign, Route } from 'lucide-react';
+
+const PIE_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1'];
+
+export default function Analytics() {
+  const totalRevenue = monthlyRevenue.reduce((s, m) => s + (m.revenue as number), 0);
+  const totalProfit = monthlyRevenue.reduce((s, m) => s + (m.profit as number), 0);
+  const totalExpenses = monthlyRevenue.reduce((s, m) => s + (m.expenses as number), 0);
+  const completedTrips = mockTrips.filter((t) => t.status === 'Completed').length;
+
+  const expenseByCategory = [
+    { name: 'Fuel', value: 17600 },
+    { name: 'Maintenance', value: 6350 },
+    { name: 'Tolls', value: 850 },
+    { name: 'Insurance', value: 2400 },
+    { name: 'Salaries', value: 45000 },
+    { name: 'Other', value: 1200 },
+  ];
+
+  const tripsByStatus = [
+    { name: 'Completed', value: mockTrips.filter((t) => t.status === 'Completed').length },
+    { name: 'In Progress', value: mockTrips.filter((t) => t.status === 'In Progress').length },
+    { name: 'Scheduled', value: mockTrips.filter((t) => t.status === 'Scheduled').length },
+    { name: 'Dispatched', value: mockTrips.filter((t) => t.status === 'Dispatched').length },
+    { name: 'Delayed', value: mockTrips.filter((t) => t.status === 'Delayed').length },
+  ].filter((d) => d.value > 0);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Analytics" subtitle="Fleet performance and financial insights" />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Total Revenue" value={formatNumber(totalRevenue)} icon={<DollarSign className="h-5 w-5" />} change={12} accent="emerald" />
+        <StatCard title="Total Profit" value={formatNumber(totalProfit)} icon={<TrendingUp className="h-5 w-5" />} change={8} accent="sky" />
+        <StatCard title="Total Expenses" value={formatNumber(totalExpenses)} icon={<TrendingDown className="h-5 w-5" />} change={5} accent="rose" />
+        <StatCard title="Completed Trips" value={String(completedTrips)} icon={<Route className="h-5 w-5" />} change={15} accent="indigo" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card title="Profit Trend" subtitle="Revenue vs Expenses vs Profit">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={monthlyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(v) => formatNumber(Number(v))} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card title="Expense Breakdown" subtitle="By category">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie data={expenseByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3}>
+                  {expenseByCategory.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(v) => formatNumber(Number(v))} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card title="Fleet Utilization" subtitle="Vehicle status per day">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={fleetUtilization}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="active" name="Active" stackId="a" fill="#0ea5e9" />
+                <Bar dataKey="idle" name="Idle" stackId="a" fill="#e2e8f0" />
+                <Bar dataKey="maintenance" name="Maintenance" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card title="Trip Status Distribution" subtitle="Current trips by status">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={tripsByStatus} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis type="number" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={80} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Bar dataKey="value" name="Trips" fill="#6366f1" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <Card title="Fuel & Maintenance Cost Trend" subtitle="Weekly comparison">
+        <div className="p-5">
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={fuelTrend}>
+              <defs>
+                <linearGradient id="fuelGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                <linearGradient id="maintGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} /></linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(v) => formatNumber(Number(v))} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              <Area type="monotone" dataKey="fuel" name="Fuel" stroke="#f59e0b" strokeWidth={2} fill="url(#fuelGrad)" />
+              <Area type="monotone" dataKey="maintenance" name="Maintenance" stroke="#6366f1" strokeWidth={2} fill="url(#maintGrad)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Compliance.tsx
+================================================
+import { useState } from 'react';
+import { ShieldCheck, TriangleAlert as AlertTriangle, Clock, FileCheck } from 'lucide-react';
+import { mockCompliance, mockDrivers } from '../data/mockData';
+import { PageHeader, Badge, Card, StatCard } from '../components/ui';
+import { formatDate } from '../services/format';
+
+export default function Compliance() {
+  const [filter, setFilter] = useState('All');
+  const filtered = filter === 'All' ? mockCompliance : mockCompliance.filter((r) => r.status === filter);
+  const driverName = (id: string) => mockDrivers.find((d) => d.id === id)?.name ?? 'â€”';
+
+  const compliant = mockCompliance.filter((r) => r.status === 'Compliant').length;
+  const expiring = mockCompliance.filter((r) => r.status === 'Expiring Soon').length;
+  const expired = mockCompliance.filter((r) => r.status === 'Expired').length;
+  const pending = mockCompliance.filter((r) => r.status === 'Pending Review').length;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Compliance" subtitle="Driver compliance and safety records" />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Compliant" value={String(compliant)} icon={<FileCheck className="h-5 w-5" />} accent="emerald" />
+        <StatCard title="Expiring Soon" value={String(expiring)} icon={<Clock className="h-5 w-5" />} accent="amber" />
+        <StatCard title="Expired" value={String(expired)} icon={<AlertTriangle className="h-5 w-5" />} accent="rose" />
+        <StatCard title="Pending Review" value={String(pending)} icon={<ShieldCheck className="h-5 w-5" />} accent="sky" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {['All', 'Compliant', 'Expiring Soon', 'Expired', 'Pending Review'].map((s) => (
+          <button key={s} onClick={() => setFilter(s)} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${filter === s ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>{s}</button>
+        ))}
+      </div>
+
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="px-5 py-3 font-semibold text-slate-600">ID</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Driver</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Category</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Title</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Due Date</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Status</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50/70">
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{r.id}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{driverName(r.driverId)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{r.category}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{r.title}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{formatDate(r.dueDate)}</td>
+                  <td className="px-5 py-3.5"><Badge status={r.status} /></td>
+                  <td className="px-5 py-3.5 text-slate-500">{r.notes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Dashboard.tsx
+================================================
+import { Truck, Users, Route, DollarSign, TrendingUp, TriangleAlert as AlertTriangle } from 'lucide-react';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { mockVehicles, mockDrivers, mockTrips, mockMaintenance, monthlyRevenue, fleetUtilization } from '../data/mockData';
+import { PageHeader, Card, StatCard, Badge } from '../components/ui';
+import { formatNumber } from '../services/format';
+
+const PIE_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+export default function Dashboard() {
+  const activeVehicles = mockVehicles.filter((v) => v.status === 'Active').length;
+  const onDutyDrivers = mockDrivers.filter((d) => d.status === 'On Duty').length;
+  const activeTrips = mockTrips.filter((t) => t.status === 'In Progress' || t.status === 'Dispatched').length;
+  const overdueMaint = mockMaintenance.filter((m) => m.status === 'Overdue').length;
+  const totalRevenue = monthlyRevenue.reduce((s, m) => s + (m.revenue as number), 0);
+
+  const vehicleStatusData = [
+    { name: 'Active', value: mockVehicles.filter((v) => v.status === 'Active').length },
+    { name: 'Maintenance', value: mockVehicles.filter((v) => v.status === 'Maintenance').length },
+    { name: 'Idle', value: mockVehicles.filter((v) => v.status === 'Idle').length },
+    { name: 'Retired', value: mockVehicles.filter((v) => v.status === 'Retired').length },
+  ].filter((d) => d.value > 0);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Dashboard" subtitle="Fleet operations overview" />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Active Vehicles" value={String(activeVehicles)} icon={<Truck className="h-5 w-5" />} change={3} accent="sky" />
+        <StatCard title="On-Duty Drivers" value={String(onDutyDrivers)} icon={<Users className="h-5 w-5" />} change={5} accent="emerald" />
+        <StatCard title="Active Trips" value={String(activeTrips)} icon={<Route className="h-5 w-5" />} change={-2} accent="amber" />
+        <StatCard title="Total Revenue" value={formatNumber(totalRevenue)} icon={<DollarSign className="h-5 w-5" />} change={8} accent="indigo" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card title="Revenue vs Expenses" subtitle="Last 7 months" className="lg:col-span-2">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={monthlyRevenue}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(v) => formatNumber(Number(v))} />
+                <Area type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={2} fill="url(#revGrad)" />
+                <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fill="url(#expGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card title="Vehicle Status" subtitle="Current fleet breakdown">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie data={vehicleStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                  {vehicleStatusData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card title="Fleet Utilization" subtitle="Vehicles active per day">
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={fleetUtilization}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="active" name="Active" stackId="a" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="idle" name="Idle" stackId="a" fill="#e2e8f0" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="maintenance" name="Maintenance" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card title="Recent Alerts" subtitle="Items needing attention">
+          <div className="divide-y divide-slate-100">
+            <AlertRow icon={<AlertTriangle className="h-4 w-4 text-rose-500" />} title="Brake service overdue" subtitle="V-005 (Peterbilt 579) â€” 11 days overdue" badge="Overdue" />
+            <AlertRow icon={<TrendingUp className="h-4 w-4 text-amber-500" />} title="License expiring soon" subtitle="D-002 (Sarah Williams) â€” expires Nov 2026" badge="Expiring Soon" />
+            <AlertRow icon={<AlertTriangle className="h-4 w-4 text-rose-500" />} title="Drug screening expired" subtitle="D-006 (Jessica Martinez) â€” expired May 2026" badge="Expired" />
+            <AlertRow icon={<Truck className="h-4 w-4 text-amber-500" />} title="Vehicle in maintenance" subtitle="V-003 (Volvo VNL 760) â€” turbocharger repair" badge="Maintenance" />
+            {overdueMaint === 0 && (
+              <div className="p-5 text-center text-sm text-slate-400">No overdue items. All clear!</div>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function AlertRow({ icon, title, subtitle, badge }: { icon: React.ReactNode; title: string; subtitle: string; badge: string }) {
+  return (
+    <div className="flex items-center gap-3 p-4">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50">{icon}</div>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-slate-800">{title}</p>
+        <p className="text-xs text-slate-500">{subtitle}</p>
+      </div>
+      <Badge status={badge} />
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Drivers.tsx
+================================================
+import { useState } from 'react';
+import { Search, User as UserIcon, Phone, Mail, Star, Plus } from 'lucide-react';
+import { mockDrivers, mockVehicles } from '../data/mockData';
+import { PageHeader, Badge, Button, Input, StatCard, Modal } from '../components/ui';
+import { formatDate } from '../services/format';
+import type { Driver } from '../types';
+
+export default function Drivers() {
+  const [drivers] = useState<Driver[]>(mockDrivers);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [addOpen, setAddOpen] = useState(false);
+  const [selected, setSelected] = useState<Driver | null>(null);
+
+  const vehiclePlate = (id: string | null) => mockVehicles.find((v) => v.id === id)?.plate ?? 'None';
+
+  const filtered = drivers.filter((d) => {
+    const matchesQuery = d.name.toLowerCase().includes(query.toLowerCase()) || d.email.toLowerCase().includes(query.toLowerCase());
+    const matchesFilter = filter === 'All' || d.status === filter;
+    return matchesQuery && matchesFilter;
+  });
+
+  const onDuty = drivers.filter((d) => d.status === 'On Duty').length;
+  const offDuty = drivers.filter((d) => d.status === 'Off Duty').length;
+  const onLeave = drivers.filter((d) => d.status === 'On Leave').length;
+  const avgRating = (drivers.reduce((s, d) => s + d.rating, 0) / drivers.length).toFixed(1);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Drivers" subtitle={`${drivers.length} drivers in the system`} actions={<Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add Driver</Button>} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="On Duty" value={String(onDuty)} icon={<UserIcon className="h-5 w-5" />} accent="emerald" />
+        <StatCard title="Off Duty" value={String(offDuty)} icon={<UserIcon className="h-5 w-5" />} accent="sky" />
+        <StatCard title="On Leave" value={String(onLeave)} icon={<UserIcon className="h-5 w-5" />} accent="amber" />
+        <StatCard title="Avg Rating" value={avgRating} icon={<Star className="h-5 w-5" />} accent="indigo" />
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+        </div>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 focus:outline-none">
+          {['All', 'On Duty', 'Off Duty', 'On Leave', 'Suspended'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((d) => (
+          <button key={d.id} onClick={() => setSelected(d)} className="group rounded-xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/60">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-lg font-semibold text-sky-700">{d.name.charAt(0)}</div>
+                <div>
+                  <p className="font-semibold text-slate-900">{d.name}</p>
+                  <p className="text-xs text-slate-500">{d.licenseNumber}</p>
+                </div>
+              </div>
+              <Badge status={d.status} />
+            </div>
+            <div className="mt-4 space-y-1.5 text-xs text-slate-500">
+              <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {d.phone}</p>
+              <p className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {d.email}</p>
+              <p className="flex items-center gap-1.5"><UserIcon className="h-3.5 w-3.5" /> Assigned: {vehiclePlate(d.assignedVehicleId)}</p>
+            </div>
+            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+              <div className="flex items-center gap-1">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                <span className="text-xs font-medium text-slate-600">{d.rating}</span>
+                <span className="text-xs text-slate-400">Â· {d.totalTrips} trips</span>
+              </div>
+              <span className="text-xs text-slate-400">License: {formatDate(d.licenseExpiry)}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title="Driver Details" size="lg">
+        {selected && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-xl font-semibold text-sky-700">{selected.name.charAt(0)}</div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{selected.name}</p>
+                <p className="text-sm text-slate-500">{selected.email}</p>
+              </div>
+              <div className="ml-auto"><Badge status={selected.status} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: <Phone className="h-4 w-4" />, label: 'Phone', value: selected.phone },
+                { icon: <Mail className="h-4 w-4" />, label: 'Email', value: selected.email },
+                { icon: <UserIcon className="h-4 w-4" />, label: 'License #', value: selected.licenseNumber },
+                { icon: <UserIcon className="h-4 w-4" />, label: 'License Expiry', value: formatDate(selected.licenseExpiry) },
+                { icon: <Star className="h-4 w-4" />, label: 'Rating', value: `${selected.rating} / 5.0` },
+                { icon: <UserIcon className="h-4 w-4" />, label: 'Total Trips', value: String(selected.totalTrips) },
+                { icon: <UserIcon className="h-4 w-4" />, label: 'Assigned Vehicle', value: vehiclePlate(selected.assignedVehicleId) },
+              ].map((d) => (
+                <div key={d.label} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3">
+                  <span className="text-slate-400">{d.icon}</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{d.label}</p>
+                    <p className="text-sm font-medium text-slate-800">{d.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Driver" size="lg"
+        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Add Driver</Button></>}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Full Name" placeholder="John Doe" />
+            <Input label="Phone" placeholder="+1 713-555-0100" />
+          </div>
+          <Input label="Email" type="email" placeholder="john@fleetco.com" />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="License Number" placeholder="CDL-A-99299" />
+            <Input label="License Expiry" type="date" />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Fleet.tsx
+================================================
+import { useState } from 'react';
+import { Search, Truck, Fuel, Gauge, Plus } from 'lucide-react';
+import { mockVehicles, mockDrivers } from '../data/mockData';
+import { PageHeader, Card, Badge, Button, Input, StatCard, Modal } from '../components/ui';
+import { formatNumber } from '../services/format';
+import type { Vehicle } from '../types';
+
+export default function Fleet() {
+  const [vehicles] = useState<Vehicle[]>(mockVehicles);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [addOpen, setAddOpen] = useState(false);
+  const [selected, setSelected] = useState<Vehicle | null>(null);
+
+  const driverName = (id: string | null) => mockDrivers.find((d) => d.id === id)?.name ?? 'Unassigned';
+
+  const filtered = vehicles.filter((v) => {
+    const matchesQuery = v.plate.toLowerCase().includes(query.toLowerCase()) || v.model.toLowerCase().includes(query.toLowerCase());
+    const matchesFilter = filter === 'All' || v.status === filter;
+    return matchesQuery && matchesFilter;
+  });
+
+  const active = vehicles.filter((v) => v.status === 'Active').length;
+  const maintenance = vehicles.filter((v) => v.status === 'Maintenance').length;
+  const idle = vehicles.filter((v) => v.status === 'Idle').length;
+  const avgFuel = Math.round(vehicles.reduce((s, v) => s + v.fuelLevel, 0) / vehicles.length);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Fleet" subtitle={`${vehicles.length} vehicles registered`} actions={<Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add Vehicle</Button>} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Active" value={String(active)} icon={<Truck className="h-5 w-5" />} accent="emerald" />
+        <StatCard title="In Maintenance" value={String(maintenance)} icon={<Truck className="h-5 w-5" />} accent="amber" />
+        <StatCard title="Idle" value={String(idle)} icon={<Truck className="h-5 w-5" />} accent="sky" />
+        <StatCard title="Avg Fuel Level" value={`${avgFuel}%`} icon={<Fuel className="h-5 w-5" />} accent="indigo" />
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by plate or model..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+        </div>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 focus:outline-none">
+          {['All', 'Active', 'Maintenance', 'Idle', 'Retired'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="px-5 py-3 font-semibold text-slate-600">Plate</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Model</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Type</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Status</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Capacity</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Fuel</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Odometer</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Driver</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((v) => (
+                <tr key={v.id} onClick={() => setSelected(v)} className="cursor-pointer hover:bg-slate-50/70">
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{v.plate}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{v.model}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{v.type}</td>
+                  <td className="px-5 py-3.5"><Badge status={v.status} /></td>
+                  <td className="px-5 py-3.5 text-slate-600">{formatNumber(v.capacityKg)} kg</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+                        <div className={`h-full rounded-full ${v.fuelLevel > 50 ? 'bg-emerald-500' : v.fuelLevel > 25 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${v.fuelLevel}%` }} />
+                      </div>
+                      <span className="text-xs text-slate-500">{v.fuelLevel}%</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">{formatNumber(v.odometerKm)} km</td>
+                  <td className="px-5 py-3.5 text-slate-600">{driverName(v.driverId)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title="Vehicle Details" size="lg">
+        {selected && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><Truck className="h-7 w-7" /></div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{selected.plate}</p>
+                <p className="text-sm text-slate-500">{selected.model}</p>
+              </div>
+              <div className="ml-auto"><Badge status={selected.status} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: <Truck className="h-4 w-4" />, label: 'Type', value: selected.type },
+                { icon: <Gauge className="h-4 w-4" />, label: 'Capacity', value: `${formatNumber(selected.capacityKg)} kg (${(selected.capacityKg / 1000).toFixed(1)}t)` },
+                { icon: <Fuel className="h-4 w-4" />, label: 'Fuel Level', value: `${selected.fuelLevel}%` },
+                { icon: <Gauge className="h-4 w-4" />, label: 'Odometer', value: `${formatNumber(selected.odometerKm)} km` },
+                { icon: <Gauge className="h-4 w-4" />, label: 'Next Maintenance', value: `${formatNumber(selected.nextMaintenanceKm)} km` },
+                { icon: <Truck className="h-4 w-4" />, label: 'Driver', value: driverName(selected.driverId) },
+              ].map((d) => (
+                <div key={d.label} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3">
+                  <span className="text-slate-400">{d.icon}</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{d.label}</p>
+                    <p className="text-sm font-medium text-slate-800">{d.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Vehicle" size="lg"
+        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Add Vehicle</Button></>}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Plate Number" placeholder="TX-7790" />
+            <Input label="Model" placeholder="Freightliner Cascadia" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
+              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                {['Truck', 'Van', 'Trailer', 'Bus', 'Refrigerated'].map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <Input label="Capacity (kg)" type="number" placeholder="12000" />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: FuelExpenses.tsx
+================================================
+import { useState } from 'react';
+import { Plus, Fuel, Receipt, TrendingDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { mockExpenses, mockFuelRecords, mockVehicles, fuelTrend } from '../data/mockData';
+import { PageHeader, Card, Button, Input, StatCard, Modal, Badge } from '../components/ui';
+import { formatNumber, formatNumber2, formatDate } from '../services/format';
+import type { ExpenseCategory } from '../types';
+
+export default function FuelExpenses() {
+  const [expenses] = useState(mockExpenses);
+  const [fuelRecords] = useState(mockFuelRecords);
+  const [addOpen, setAddOpen] = useState(false);
+  const [tab, setTab] = useState<'expenses' | 'fuel'>('expenses');
+
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalFuelCost = expenses.filter((e) => e.category === 'Fuel').reduce((s, e) => s + e.amount, 0);
+  const totalMaintenanceCost = expenses.filter((e) => e.category === 'Maintenance').reduce((s, e) => s + e.amount, 0);
+  const avgFuelPerVehicle = fuelRecords.length > 0 ? fuelRecords.reduce((s, f) => s + f.totalCost, 0) / fuelRecords.length : 0;
+
+  const vehiclePlate = (id: string | null) => mockVehicles.find((v) => v.id === id)?.plate ?? 'â€”';
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Fuel & Expenses" subtitle="Track fuel costs and operational expenses" actions={<Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add Expense</Button>} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Total Expenses" value={formatNumber(totalExpenses)} icon={<Receipt className="h-5 w-5" />} change={5} accent="rose" />
+        <StatCard title="Fuel Cost" value={formatNumber(totalFuelCost)} icon={<Fuel className="h-5 w-5" />} change={-3} accent="amber" />
+        <StatCard title="Maintenance Cost" value={formatNumber(totalMaintenanceCost)} icon={<TrendingDown className="h-5 w-5" />} change={2} accent="indigo" />
+        <StatCard title="Avg Fuel / Vehicle" value={formatNumber2(avgFuelPerVehicle)} icon={<Fuel className="h-5 w-5" />} accent="sky" />
+      </div>
+
+      <Card title="Weekly Fuel & Maintenance Trend" subtitle="Last 4 weeks">
+        <div className="p-5">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={fuelTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(v) => formatNumber(Number(v))} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="fuel" name="Fuel" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="maintenance" name="Maintenance" fill="#6366f1" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <div className="flex items-center gap-2">
+        <button onClick={() => setTab('expenses')} className={`rounded-lg px-4 py-2 text-sm font-medium transition ${tab === 'expenses' ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Expenses</button>
+        <button onClick={() => setTab('fuel')} className={`rounded-lg px-4 py-2 text-sm font-medium transition ${tab === 'fuel' ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Fuel Records</button>
+      </div>
+
+      {tab === 'expenses' ? (
+        <Card title="All Expenses" subtitle={`${expenses.length} records`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-3 font-semibold text-slate-600">Date</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Category</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Description</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Vehicle</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {expenses.map((e) => (
+                  <tr key={e.id} className="hover:bg-slate-50/70">
+                    <td className="px-5 py-3.5 text-slate-600">{formatDate(e.date)}</td>
+                    <td className="px-5 py-3.5"><Badge status={e.category} /></td>
+                    <td className="px-5 py-3.5 text-slate-600">{e.description}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{vehiclePlate(e.vehicleId)}</td>
+                    <td className="px-5 py-3.5 text-right font-medium text-slate-800">{formatNumber(e.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : (
+        <Card title="Fuel Records" subtitle={`${fuelRecords.length} refuels`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-3 font-semibold text-slate-600">Date</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Vehicle</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Liters</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Cost / Liter</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Total Cost</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Odometer</th>
+                  <th className="px-5 py-3 font-semibold text-slate-600">Station</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {fuelRecords.map((f) => (
+                  <tr key={f.id} className="hover:bg-slate-50/70">
+                    <td className="px-5 py-3.5 text-slate-600">{formatDate(f.date)}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{vehiclePlate(f.vehicleId)}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{f.liters} L</td>
+                    <td className="px-5 py-3.5 text-slate-600">{formatNumber2(f.costPerLiter)}</td>
+                    <td className="px-5 py-3.5 font-medium text-slate-800">{formatNumber2(f.totalCost)}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{formatNumber(f.odometerKm)} km</td>
+                    <td className="px-5 py-3.5 text-slate-600">{f.station}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Expense" size="lg"
+        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Add Expense</Button></>}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Date" type="date" />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Category</label>
+              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                {(['Fuel', 'Maintenance', 'Tolls', 'Insurance', 'Salaries', 'Other'] as ExpenseCategory[]).map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <Input label="Description" placeholder="Diesel refill - V-001" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
+              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                <option value="">None</option>
+                {mockVehicles.map((v) => <option key={v.id} value={v.id}>{v.plate}</option>)}
+              </select>
+            </div>
+            <Input label="Amount" type="number" placeholder="640" />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Login.tsx
+================================================
+import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, Lock, ArrowRight, Truck as TruckIcon } from 'lucide-react';
+import { authService } from '../services/authService';
+import { Button, Input } from '../components/ui';
+import type { Role } from '../types';
+
+const demoAccounts: { role: Role; email: string; label: string }[] = [
+  { role: 'Admin', email: 'admin@fleetco.com', label: 'Admin' },
+  { role: 'Fleet Manager', email: 'fleet@fleetco.com', label: 'Fleet Manager' },
+  { role: 'Dispatcher', email: 'dispatch@fleetco.com', label: 'Dispatcher' },
+  { role: 'Safety Officer', email: 'safety@fleetco.com', label: 'Safety Officer' },
+  { role: 'Financial Analyst', email: 'finance@fleetco.com', label: 'Financial Analyst' },
+];
+
+export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('admin@fleetco.com');
+  const [password, setPassword] = useState('demo1234');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [activeRole, setActiveRole] = useState<Role>('Admin');
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      authService.login(email, password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pickAccount = (acc: typeof demoAccounts[number]) => {
+    setEmail(acc.email);
+    setPassword('demo1234');
+    setActiveRole(acc.role);
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          {/* Website Name only â€” no welcome text, taglines, or descriptions */}
+          <div className="mb-6 flex flex-col items-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-sky-600 text-white">
+              <TruckIcon className="h-6 w-6" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Transport Management System</h1>
+          </div>
+
+          {/* Role-Based Demo Accounts â€” directly below the title, above the form */}
+          <div className="mb-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Role-Based Demo Accounts</p>
+            <div className="grid grid-cols-2 gap-2">
+              {demoAccounts.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => pickAccount(acc)}
+                  className={`rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${
+                    activeRole === acc.role
+                      ? 'border-sky-300 bg-sky-50 text-sky-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {acc.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400">Password for all accounts: demo1234</p>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Email"
+              type="email"
+              icon={<Mail className="h-4 w-4" />}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@company.com"
+              required
+            />
+            <Input
+              label="Password"
+              type="password"
+              icon={<Lock className="h-4 w-4" />}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              required
+            />
+
+            {error && (
+              <div className="rounded-lg bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700">{error}</div>
+            )}
+
+            <Button type="submit" size="lg" loading={loading} className="w-full">
+              Sign in
+              {!loading && <ArrowRight className="h-4 w-4" />}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Maintenance.tsx
+================================================
+import { useState } from 'react';
+import { Plus, Wrench, Calendar, User as UserIcon, TriangleAlert as AlertTriangle, Play, CircleCheck as CheckCircle } from 'lucide-react';
+import { mockMaintenance, mockVehicles } from '../data/mockData';
+import { PageHeader, Button, Badge, StatCard, Modal, Input } from '../components/ui';
+import { formatNumber, formatDate } from '../services/format';
+import type { MaintenanceRecord, MaintenanceStatus } from '../types';
+
+export default function Maintenance() {
+  const [records, setRecords] = useState<MaintenanceRecord[]>(mockMaintenance);
+  const [filter, setFilter] = useState('All');
+  const [addOpen, setAddOpen] = useState(false);
+  const [selected, setSelected] = useState<MaintenanceRecord | null>(null);
+
+  const filtered = filter === 'All' ? records : records.filter((r) => r.status === filter);
+  const vehiclePlate = (id: string) => mockVehicles.find((v) => v.id === id)?.plate ?? 'â€”';
+
+  const scheduled = records.filter((r) => r.status === 'Scheduled').length;
+  const inProgress = records.filter((r) => r.status === 'In Progress').length;
+  const overdue = records.filter((r) => r.status === 'Overdue').length;
+  const totalCost = records.reduce((s, r) => s + r.cost, 0);
+
+  const updateStatus = (id: string, status: MaintenanceStatus) => {
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : r.completedDate } : r)));
+    setSelected((prev) => (prev?.id === id ? { ...prev, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : prev.completedDate } : prev));
+  };
+
+  const statusButtons: { status: MaintenanceStatus; label: string; icon: typeof Play; color: string }[] = [
+    { status: 'In Progress', label: 'In Progress', icon: Play, color: 'amber' },
+    { status: 'Completed', label: 'Completed', icon: CheckCircle, color: 'emerald' },
+    { status: 'Overdue', label: 'Overdue', icon: AlertTriangle, color: 'rose' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Maintenance" subtitle="Track and schedule vehicle maintenance" actions={<Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Log Maintenance</Button>} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Scheduled" value={String(scheduled)} icon={<Calendar className="h-5 w-5" />} accent="sky" />
+        <StatCard title="In Progress" value={String(inProgress)} icon={<Wrench className="h-5 w-5" />} accent="amber" />
+        <StatCard title="Overdue" value={String(overdue)} icon={<AlertTriangle className="h-5 w-5" />} accent="rose" />
+        <StatCard title="Total Cost" value={formatNumber(totalCost)} icon={<Wrench className="h-5 w-5" />} accent="emerald" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {['All', 'Scheduled', 'In Progress', 'Completed', 'Overdue'].map((s) => (
+          <button key={s} onClick={() => setFilter(s)} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${filter === s ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>{s}</button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {filtered.map((r) => (
+          <button key={r.id} onClick={() => setSelected(r)} className="group rounded-xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/60">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><Wrench className="h-5 w-5" /></div>
+                <div><p className="font-semibold text-slate-900">{r.type}</p><p className="text-xs text-slate-500">{vehiclePlate(r.vehicleId)} Â· {r.id}</p></div>
+              </div>
+              <Badge status={r.status} />
+            </div>
+            <p className="mt-3 text-sm text-slate-600">{r.notes}</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-500"><Calendar className="h-3.5 w-3.5" /> Scheduled: {formatDate(r.scheduledDate)}</div>
+              <div className="flex items-center gap-1.5 text-slate-500"><UserIcon className="h-3.5 w-3.5" /> {r.mechanic}</div>
+              {r.completedDate && <div className="flex items-center gap-1.5 text-slate-500"><Calendar className="h-3.5 w-3.5" /> Completed: {formatDate(r.completedDate)}</div>}
+              <div className="flex items-center gap-1.5 font-medium text-slate-700">Cost: {formatNumber(r.cost)}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Log Maintenance" size="lg"
+        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Save Record</Button></>}>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
+            <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+              {mockVehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} â€” {v.model}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
+              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                {['Oil Change', 'Tire Rotation', 'Brake Service', 'Engine Repair', 'Inspection', 'General'].map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <Input label="Scheduled Date" type="date" />
+          </div>
+          <div className="grid grid-cols-2 gap-3"><Input label="Mechanic" placeholder="e.g. Erik Lund" /><Input label="Cost" type="number" placeholder="220" /></div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Notes</label>
+            <textarea rows={3} placeholder="Describe the maintenance work..." className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40" />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title="Maintenance Details" size="lg">
+        {selected && (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><Wrench className="h-6 w-6" /></div>
+                <div><p className="text-lg font-semibold text-slate-900">{selected.type}</p><p className="text-sm text-slate-500">{vehiclePlate(selected.vehicleId)} Â· {selected.id}</p></div>
+              </div>
+              <Badge status={selected.status} />
+            </div>
+            <p className="text-sm text-slate-600">{selected.notes}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                { icon: <Calendar className="h-4 w-4" />, label: 'Scheduled Date', value: formatDate(selected.scheduledDate) },
+                { icon: <UserIcon className="h-4 w-4" />, label: 'Mechanic', value: selected.mechanic },
+                { icon: <Wrench className="h-4 w-4" />, label: 'Cost', value: formatNumber(selected.cost) },
+                ...(selected.completedDate ? [{ icon: <Calendar className="h-4 w-4" />, label: 'Completed Date', value: formatDate(selected.completedDate) }] : []),
+              ].map((d) => (
+                <div key={d.label} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3"><span className="text-slate-400">{d.icon}</span><div><p className="text-xs text-slate-400">{d.label}</p><p className="text-sm font-medium text-slate-800">{d.value}</p></div></div>
+              ))}
+            </div>
+            <div className="border-t border-slate-100 pt-4">
+              <p className="mb-2 text-sm font-medium text-slate-700">Update Status</p>
+              <div className="flex flex-wrap gap-2">
+                {statusButtons.map((btn) => (
+                  <button key={btn.status} onClick={() => updateStatus(selected.id, btn.status)} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition ${selected.status === btn.status ? `bg-${btn.color}-100 text-${btn.color}-700 ring-1 ring-${btn.color}-300` : `bg-${btn.color}-50 text-${btn.color}-600 hover:bg-${btn.color}-100`}`}>
+                    <btn.icon className="h-3.5 w-3.5" />{btn.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+
+
+================================================
+FILE: Settings.tsx
+================================================
+import { useState } from 'react';
+import { User, Bell, Shield, Building2, Save, Users as UsersIcon, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { PageHeader, Card, Button, Input, Badge } from '../components/ui';
+import { authService } from "../services/authService";
+import { userService } from "../services/userService";
+import { ALL_ROLES } from '../config/permissions';
+import type { AppUser, Role } from '../types';
+
+type Tab = 'profile' | 'company' | 'notifications' | 'security' | 'users';
+
+const tabs: { id: Tab; label: string; icon: typeof User; adminOnly?: boolean }[] = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'company', label: 'Company', icon: Building2 },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'security', label: 'Security', icon: Shield },
+  { id: 'users', label: 'Users & Roles', icon: UsersIcon, adminOnly: true },
+];
+
+export default function Settings() {
+  const user = authService.getCurrentUser();
+  const isAdmin = user?.role === 'Admin';
+  const [tab, setTab] = useState<Tab>('profile');
+  const visibleTabs = tabs.filter((t) => !t.adminOnly || isAdmin);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Settings" subtitle="Manage your account and preferences" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <nav className="space-y-1">
+          {visibleTabs.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition ${tab === t.id ? 'bg-sky-50 text-sky-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+              <t.icon className="h-4 w-4" />{t.label}
+            </button>
+          ))}
+        </nav>
+        <div className="lg:col-span-3">
+          {tab === 'profile' && <ProfileTab name={user?.name} email={user?.email} role={user?.role} />}
+          {tab === 'company' && <CompanyTab />}
+          {tab === 'notifications' && <NotificationsTab />}
+          {tab === 'security' && <SecurityTab />}
+          {tab === 'users' && isAdmin && <UsersTab />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileTab({ name, email, role }: { name?: string; email?: string; role?: string }) {
+  return (
+    <Card title="Profile Information">
+      <div className="space-y-5 p-5">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-600 text-xl font-semibold text-white">{name?.charAt(0) ?? 'A'}</div>
+          <div><Button variant="outline" size="sm">Change Photo</Button><p className="mt-1.5 text-xs text-slate-400">JPG, PNG or GIF. Max 2MB.</p></div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label="Full Name" defaultValue={name ?? 'Alex Morgan'} />
+          <Input label="Email" type="email" defaultValue={email ?? 'admin@fleetco.com'} />
+          <Input label="Phone" defaultValue="+1 713-555-0100" />
+          <Input label="Role" defaultValue={role ?? 'Fleet Administrator'} disabled />
+        </div>
+        <div className="flex justify-end"><Button><Save className="h-4 w-4" /> Save Changes</Button></div>
+      </div>
+    </Card>
+  );
+}
+
+function CompanyTab() {
+  return (
+    <Card title="Company Details">
+      <div className="space-y-5 p-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label="Company Name" defaultValue="FleetCo Logistics" />
+          <Input label="Industry" defaultValue="Transportation" />
+          <Input label="Website" defaultValue="https://fleetco.com" />
+          <div><label className="mb-1.5 block text-sm font-medium text-slate-700">Currency</label><select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40"><option>USD ($)</option><option>EUR (â‚¬)</option><option>GBP (Â£)</option></select></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-slate-700">Timezone</label><select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40"><option>America/Chicago (CST)</option><option>America/New_York (EST)</option><option>America/Los_Angeles (PST)</option></select></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-slate-700">Units</label><select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40"><option>Metric (km, kg, L)</option><option>Imperial (mi, lb, gal)</option></select></div>
+        </div>
+        <div className="flex justify-end"><Button><Save className="h-4 w-4" /> Save Company</Button></div>
+      </div>
+    </Card>
+  );
+}
+
+function NotificationsTab() {
+  return (
+    <Card title="Notification Preferences">
+      <div className="divide-y divide-slate-100">
+        {[
+          { title: 'Trip updates', desc: 'Get notified when trips start, complete, or are delayed', on: true },
+          { title: 'Maintenance alerts', desc: 'Receive alerts for scheduled and overdue maintenance', on: true },
+          { title: 'Fuel threshold', desc: 'Alert when vehicle fuel drops below 25%', on: true },
+          { title: 'Weekly reports', desc: 'Email summary of fleet performance every Monday', on: false },
+          { title: 'Driver status changes', desc: 'Notify when drivers go on or off duty', on: false },
+        ].map((n) => (
+          <div key={n.title} className="flex items-center justify-between p-5">
+            <div><p className="text-sm font-medium text-slate-800">{n.title}</p><p className="text-xs text-slate-500">{n.desc}</p></div>
+            <Toggle defaultOn={n.on} />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function SecurityTab() {
+  return (
+    <Card title="Security">
+      <div className="space-y-5 p-5">
+        <div className="flex items-center justify-between rounded-lg bg-slate-50 p-4">
+          <div><p className="text-sm font-medium text-slate-800">Two-Factor Authentication</p><p className="text-xs text-slate-500">Add an extra layer of security to your account</p></div>
+          <Badge status="Active" />
+        </div>
+        <Input label="Current Password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><Input label="New Password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" /><Input label="Confirm Password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" /></div>
+        <div className="flex justify-end"><Button><Shield className="h-4 w-4" /> Update Password</Button></div>
+      </div>
+    </Card>
+  );
+}
+
+function UsersTab() {
+  const [users, setUsers] = useState<AppUser[]>(userService.getUsers());
+  const [editing, setEditing] = useState<AppUser | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState<Role>('Dispatcher');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState<Role>('Dispatcher');
+
+  const openEdit = (u: AppUser) => { setEditing(u); setEditName(u.name); setEditRole(u.role); };
+  const saveEdit = () => { if (!editing) return; userService.updateUserName(editing.id, editName); setUsers(userService.updateUserRole(editing.id, editRole)); setEditing(null); };
+  const confirmDelete = () => { if (!deleteId) return; setUsers(userService.deleteUser(deleteId)); setDeleteId(null); };
+  const handleAdd = () => { if (!newName || !newEmail) return; setUsers(userService.addUser(newName, newEmail, newRole)); setNewName(''); setNewEmail(''); setNewRole('Dispatcher'); setAddOpen(false); };
+
+  return (
+    <Card title="User & Role Management" action={<Button size="sm" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add User</Button>}>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead><tr className="border-b border-slate-100 bg-slate-50/60">
+            <th className="px-5 py-3 font-semibold text-slate-600">Name</th>
+            <th className="px-5 py-3 font-semibold text-slate-600">Email</th>
+            <th className="px-5 py-3 font-semibold text-slate-600">Role</th>
+            <th className="px-5 py-3 font-semibold text-slate-600 text-right">Actions</th>
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">
+            {users.map((u) => (
+              <tr key={u.id} className="hover:bg-slate-50/70">
+                <td className="px-5 py-3.5 font-medium text-slate-800">{u.name}</td>
+                <td className="px-5 py-3.5 text-slate-600">{u.email}</td>
+                <td className="px-5 py-3.5"><span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">{u.role}</span></td>
+                <td className="px-5 py-3.5"><div className="flex justify-end gap-1.5">
+                  <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-sky-600"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => setDeleteId(u.id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                </div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setEditing(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
+            <div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-900">Edit User</h3><button onClick={() => setEditing(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
+            <div className="space-y-4">
+              <Input label="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+              <div><label className="mb-1.5 block text-sm font-medium text-slate-700">Role</label><select value={editRole} onChange={(e) => setEditRole(e.target.value as Role)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">{ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</select></div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={saveEdit}><Save className="h-4 w-4" /> Save Changes</Button></div>
+          </div>
+        </div>
+      )}
+
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-slate-900">Delete User?</h3>
+            <p className="mt-2 text-sm text-slate-500">This action cannot be undone.</p>
+            <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => setDeleteId(null)}>Cancel</Button><Button variant="danger" onClick={confirmDelete}><Trash2 className="h-4 w-4" /> Delete</Button></div>
+          </div>
+        </div>
+      )}
+
+      {addOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setAddOpen(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
+            <div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-900">Add New User</h3><button onClick={() => setAddOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
+            <div className="space-y-4">
+              <Input label="Full Name" placeholder="e.g. John Doe" value={newName} onChange={(e) => setNewName(e.target.value)} />
+              <Input label="Email" type="email" placeholder="john@fleetco.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+              <div><label className="mb-1.5 block text-sm font-medium text-slate-700">Role</label><select value={newRole} onChange={(e) => setNewRole(e.target.value as Role)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">{ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</select></div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={handleAdd}><Plus className="h-4 w-4" /> Add User</Button></div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function Toggle({ defaultOn }: { defaultOn: boolean }) {
+  const [on, setOn] = useState(defaultOn);
+  return <button onClick={() => setOn((o) => !o)} className={`relative h-6 w-11 rounded-full transition-colors ${on ? 'bg-sky-600' : 'bg-slate-300'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} /></button>;
+}
+
+
+
+================================================
+FILE: Trips.tsx
+================================================
+import { useState } from 'react';
+import { Plus, Search, MapPin, Clock, Package, Send, Ban, TriangleAlert as AlertTriangle } from 'lucide-react';
+import { mockTrips, mockVehicles, mockDrivers } from '../data/mockData';
+import { PageHeader, Button, Badge, Card, Modal, Input } from '../components/ui';
+import { formatNumber } from '../services/format';
+import type { Trip, Vehicle, Driver, TripStatus } from '../types';
+
+export default function Trips() {
+  const [trips, setTrips] = useState<Trip[]>(mockTrips);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [addOpen, setAddOpen] = useState(false);
+  const [selected, setSelected] = useState<Trip | null>(null);
+
+  const filtered = trips.filter((t) => {
+    const matchesQuery = t.origin.toLowerCase().includes(query.toLowerCase()) || t.destination.toLowerCase().includes(query.toLowerCase()) || t.id.toLowerCase().includes(query.toLowerCase());
+    const matchesFilter = filter === 'All' || t.status === filter;
+    return matchesQuery && matchesFilter;
+  });
+
+  const driverName = (id: string) => mockDrivers.find((d) => d.id === id)?.name ?? 'â€”';
+  const vehiclePlate = (id: string) => mockVehicles.find((v) => v.id === id)?.plate ?? 'â€”';
+
+  const updateTripStatus = (id: string, status: TripStatus) => {
+    setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+    setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+  };
+
+  const canDispatch = (t: Trip) => t.status === 'Scheduled' || t.status === 'Delayed';
+  const canCancel = (t: Trip) => t.status !== 'Completed' && t.status !== 'Cancelled';
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Trips" subtitle={`${trips.length} total trips Â· ${trips.filter((t) => t.status === 'In Progress' || t.status === 'Dispatched').length} active`} actions={<Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Schedule Trip</Button>} />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by route or trip ID..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+        </div>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 focus:outline-none">
+          {['All', 'Scheduled', 'Dispatched', 'In Progress', 'Completed', 'Delayed', 'Cancelled'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="px-5 py-3 font-semibold text-slate-600">Trip</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Route</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Driver</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Vehicle</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Departure</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Status</th>
+                <th className="px-5 py-3 font-semibold text-slate-600">Revenue</th>
+                <th className="px-5 py-3 font-semibold text-slate-600 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50/70">
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{t.id}</td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    <div className="flex items-center gap-1.5"><span>{t.origin}</span><span className="text-slate-300">â†’</span><span>{t.destination}</span></div>
+                    <span className="text-xs text-slate-400">{t.distanceKm} km Â· {t.weightTons}t</span>
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">{driverName(t.driverId)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{vehiclePlate(t.vehicleId)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{t.departureTime}</td>
+                  <td className="px-5 py-3.5"><Badge status={t.status} /></td>
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{formatNumber(t.revenue)}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex justify-end gap-1.5">
+                      {canDispatch(t) && (
+                        <button onClick={() => updateTripStatus(t.id, 'Dispatched')} className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"><Send className="h-3.5 w-3.5" /> Dispatch</button>
+                      )}
+                      {canCancel(t) && (
+                        <button onClick={() => updateTripStatus(t.id, 'Cancelled')} className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"><Ban className="h-3.5 w-3.5" /> Cancel</button>
+                      )}
+                      <button onClick={() => setSelected(t)} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100">View</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <ScheduleTripModal open={addOpen} onClose={() => setAddOpen(false)} vehicles={mockVehicles} drivers={mockDrivers} />
+
+      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title="Trip Details" size="lg">
+        {selected && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div><p className="text-lg font-semibold text-slate-900">{selected.id}</p><p className="text-sm text-slate-500">{selected.origin} â†’ {selected.destination}</p></div>
+              <Badge status={selected.status} />
+            </div>
+            {selected.status === 'In Progress' && (
+              <div>
+                <div className="flex items-center justify-between text-xs"><span className="text-slate-400">Progress</span><span className="font-medium text-slate-600">{selected.progress}%</span></div>
+                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${selected.progress}%` }} /></div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                { icon: <MapPin className="h-4 w-4" />, label: 'Distance', value: `${selected.distanceKm} km` },
+                { icon: <Clock className="h-4 w-4" />, label: 'Departure', value: selected.departureTime },
+                { icon: <Clock className="h-4 w-4" />, label: 'Arrival', value: selected.arrivalTime },
+                { icon: <Package className="h-4 w-4" />, label: 'Cargo', value: `${selected.cargo} (${selected.weightTons}t)` },
+                { icon: <MapPin className="h-4 w-4" />, label: 'Revenue', value: formatNumber(selected.revenue) },
+                { icon: <MapPin className="h-4 w-4" />, label: 'Vehicle', value: vehiclePlate(selected.vehicleId) },
+              ].map((d) => (
+                <div key={d.label} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3"><span className="text-slate-400">{d.icon}</span><div><p className="text-xs text-slate-400">{d.label}</p><p className="text-sm font-medium text-slate-800">{d.value}</p></div></div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+              <Button size="sm" onClick={() => updateTripStatus(selected.id, 'Completed')}>Mark Completed</Button>
+              {canDispatch(selected) && <Button size="sm" variant="secondary" onClick={() => updateTripStatus(selected.id, 'Dispatched')}><Send className="h-3.5 w-3.5" /> Dispatch</Button>}
+              {canCancel(selected) && <Button size="sm" variant="danger" onClick={() => updateTripStatus(selected.id, 'Cancelled')}><Ban className="h-3.5 w-3.5" /> Cancel</Button>}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function ScheduleTripModal({ open, onClose, vehicles, drivers }: { open: boolean; onClose: () => void; vehicles: Vehicle[]; drivers: Driver[] }) {
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [weightTons, setWeightTons] = useState<string>('');
+  const [weightError, setWeightError] = useState('');
+
+  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+  const vehicleCapacityTons = selectedVehicle ? selectedVehicle.capacityKg / 1000 : 0;
+  const weightNum = parseFloat(weightTons);
+  const isWeightValid = !isNaN(weightNum) && weightNum > 0 && weightNum <= vehicleCapacityTons;
+  const canSchedule = selectedVehicleId !== '' && isWeightValid;
+
+  const handleWeightChange = (value: string) => {
+    setWeightTons(value);
+    const num = parseFloat(value);
+    if (value && !isNaN(num) && selectedVehicle && num > vehicleCapacityTons) {
+      setWeightError('Goods weight exceeds the selected vehicle capacity.');
+    } else {
+      setWeightError('');
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Schedule New Trip" size="lg"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={onClose} disabled={!canSchedule}>Schedule</Button></>}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3"><Input label="Origin" placeholder="Houston, TX" /><Input label="Destination" placeholder="New Orleans, LA" /></div>
+        <div className="grid grid-cols-2 gap-3"><Input label="Departure" type="datetime-local" /><Input label="Arrival" type="datetime-local" /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Driver</label>
+            <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+              {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
+            <select value={selectedVehicleId} onChange={(e) => { setSelectedVehicleId(e.target.value); setWeightError(''); }} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+              <option value="">Select a vehicle...</option>
+              {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} â€” {v.model} ({(v.capacityKg / 1000).toFixed(1)}t cap)</option>)}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Goods Weight (tons){selectedVehicle && <span className="ml-2 text-xs text-slate-400">Max capacity: {vehicleCapacityTons.toFixed(1)} tons</span>}</label>
+          <Input type="number" placeholder="e.g. 10" value={weightTons} onChange={(e) => handleWeightChange(e.target.value)} />
+          {weightError && <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700"><AlertTriangle className="h-3.5 w-3.5" />{weightError}</div>}
+          {selectedVehicle && isWeightValid && <div className="mt-2 text-xs text-emerald-600">Weight is within vehicle capacity.</div>}
+        </div>
+        <Input label="Cargo Description" placeholder="Industrial Machinery" />
+        <Input label="Revenue" type="number" placeholder="4200" />
+      </div>
+    </Modal>
+  );
+}
+
+

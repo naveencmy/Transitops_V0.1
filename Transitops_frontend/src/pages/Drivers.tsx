@@ -1,18 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, User as UserIcon, Phone, Mail, Star, Plus } from 'lucide-react';
-import { mockDrivers, mockVehicles } from '../data/mockData';
 import { PageHeader, Badge, Button, Input, StatCard, Modal } from '../components/ui';
 import { formatDate } from '../services/format';
-import type { Driver } from '../types';
+import { driverService } from '../services/driverService';
+import { vehicleService } from '../services/vehicleService';
+import type { Driver, Vehicle } from '../types';
 
 export default function Drivers() {
-  const [drivers] = useState<Driver[]>(mockDrivers);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Driver | null>(null);
 
-  const vehiclePlate = (id: string | null) => mockVehicles.find((v) => v.id === id)?.plate ?? 'None';
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [d, v] = await Promise.all([
+          driverService.getDrivers(),
+          vehicleService.getVehicles(),
+        ]);
+        setDrivers(d);
+        setVehicles(v);
+      } catch (err) {
+        console.error('Failed to load drivers:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const vehiclePlate = (id: string | null) => vehicles.find((v) => v.id === id)?.plate ?? 'None';
 
   const filtered = drivers.filter((d) => {
     const matchesQuery = d.name.toLowerCase().includes(query.toLowerCase()) || d.email.toLowerCase().includes(query.toLowerCase());
@@ -23,7 +44,18 @@ export default function Drivers() {
   const onDuty = drivers.filter((d) => d.status === 'On Duty').length;
   const offDuty = drivers.filter((d) => d.status === 'Off Duty').length;
   const onLeave = drivers.filter((d) => d.status === 'On Leave').length;
-  const avgRating = (drivers.reduce((s, d) => s + d.rating, 0) / drivers.length).toFixed(1);
+  const avgRating = drivers.length > 0 ? (drivers.reduce((s, d) => s + d.rating, 0) / drivers.length).toFixed(1) : '0.0';
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Drivers" subtitle="Loading..." />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-sm text-slate-400">Loading drivers...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

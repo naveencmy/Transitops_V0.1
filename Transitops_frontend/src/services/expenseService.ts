@@ -1,140 +1,57 @@
-import { api } from "./api";
+import type { FuelRecord } from '../types';
+import { authFetch, mapExpense, mapFuelRecord } from './api';
 
-export interface Expense {
-  id: number;
-  trip_id?: number;
-  vehicle_id?: number;
-  category: string;
-  amount: number;
-  description: string;
-  created_at: string;
-}
-
-export interface FuelLog {
-  id: number;
-  vehicle_id: number;
-  trip_id?: number;
-  liters: number;
-  cost_per_liter: number;
-  total_cost: number;
-  odometer_reading: number;
-  station: string;
-  created_at: string;
-}
-
-export interface ExpenseFilters {
-  category?: string;
-  vehicle_id?: number;
-}
-
-export interface FuelFilters {
-  vehicle_id?: number;
-}
-
-export interface CreateExpenseDto {
-  trip_id?: number;
-  vehicle_id?: number;
-  category: string;
-  amount: number;
-  description: string;
-}
-
-export interface CreateFuelDto {
-  vehicle_id: number;
-  trip_id?: number;
-  liters: number;
-  cost_per_liter: number;
-  total_cost: number;
-  odometer_reading: number;
-  station: string;
-}
-
-class ExpenseService {
-
-  // ---------------- Expenses ----------------
-
-  async getExpenses(
-    filters?: ExpenseFilters
-  ): Promise<Expense[]> {
-
-    const params = new URLSearchParams();
-
-    if (filters?.category)
-      params.append("category", filters.category);
-
-    if (filters?.vehicle_id)
-      params.append(
-        "vehicle_id",
-        String(filters.vehicle_id)
-      );
-
-    const query = params.toString();
-
-    return api.get<Expense[]>(
-      `/expenses${query ? `?${query}` : ""}`
-    );
-  }
-
-  async createExpense(
-    expense: CreateExpenseDto
-  ): Promise<Expense> {
-
-    return api.post<Expense>(
-      "/expenses",
-      expense
-    );
-  }
-
-  // ---------------- Fuel ----------------
-
-  async getFuelLogs(
-    filters?: FuelFilters
-  ): Promise<FuelLog[]> {
-
-    const params = new URLSearchParams();
-
-    if (filters?.vehicle_id)
-      params.append(
-        "vehicle_id",
-        String(filters.vehicle_id)
-      );
-
-    const query = params.toString();
-
-    return api.get<FuelLog[]>(
-      `/fuel${query ? `?${query}` : ""}`
-    );
-  }
-
-  async createFuelLog(
-    fuel: CreateFuelDto
-  ): Promise<FuelLog> {
-
-    return api.post<FuelLog>(
-      "/fuel",
-      fuel
-    );
-  }
-
-  async getVehicleExpenses(
-    vehicleId: number
-  ) {
-
-    return this.getExpenses({
-      vehicle_id: vehicleId
+export const expenseService = {
+  async getExpenses(): Promise<any[]> {
+    const response = await authFetch('/api/v1/expenses');
+    if (!response.ok) throw new Error('Failed to fetch expenses');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapExpense) : [];
+  },
+  async getFuelRecords(): Promise<FuelRecord[]> {
+    const response = await authFetch('/api/v1/fuel');
+    if (!response.ok) throw new Error('Failed to fetch fuel records');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapFuelRecord) : [];
+  },
+  async getExpensesByVehicle(vehicleId: string): Promise<any[]> {
+    const response = await authFetch(`/api/v1/expenses?vehicleId=${encodeURIComponent(vehicleId)}`);
+    if (!response.ok) throw new Error('Failed to fetch expenses');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapExpense) : [];
+  },
+  async getFuelByVehicle(vehicleId: string): Promise<FuelRecord[]> {
+    const response = await authFetch(`/api/v1/fuel?vehicleId=${encodeURIComponent(vehicleId)}`);
+    if (!response.ok) throw new Error('Failed to fetch fuel records');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapFuelRecord) : [];
+  },
+  async createExpense(expenseData: any): Promise<any> {
+    const response = await authFetch('/api/v1/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expenseData),
     });
-  }
-
-  async getVehicleFuelLogs(
-    vehicleId: number
-  ) {
-
-    return this.getFuelLogs({
-      vehicle_id: vehicleId
+    if (!response.ok) throw new Error('Failed to create expense');
+    const json = await response.json();
+    return mapExpense(json.data ?? json);
+  },
+  async updateExpense(id: string, expenseData: any): Promise<any> {
+    const response = await authFetch(`/api/v1/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(expenseData),
     });
-  }
-
-}
-
-export const expenseService =
-  new ExpenseService();
+    if (!response.ok) throw new Error('Failed to update expense');
+    const json = await response.json();
+    return mapExpense(json.data ?? json);
+  },
+  async deleteExpense(id: string): Promise<void> {
+    const response = await authFetch(`/api/v1/expenses/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete expense');
+  },
+};

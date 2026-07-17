@@ -25,7 +25,7 @@ const driverUpdateSchema = Joi.object({
   license_expiry: Joi.date().iso().optional(),
   contact_number: Joi.string().max(30).optional().allow(''),
   safety_score: Joi.number().min(0).max(5).optional().allow(null),
-  status: Joi.string().valid('Available', 'OnTrip', 'OffDuty', 'Suspended').optional()
-});
+  assigned_vehicle_id: Joi.number().integer().positive().optional().allow(null)
+}).min(1);
 
 module.exports = { driverCreateSchema, driverUpdateSchema };

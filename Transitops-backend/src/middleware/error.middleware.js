@@ -59,14 +59,11 @@ function errorHandler(err, req, res, next) {
 
   // PostgreSQL unique constraint violation
   if (err.code === '23505') {
-    const match = err.detail?.match(/\(([^)]+)\)=\(([^)]+)\)/);
-    const field = match ? match[1] : 'field';
-    const value = match ? match[2] : 'value';
     return res.status(409).json({
       success: false,
       error: {
         code: 'CONFLICT',
-        message: `${field} '${value}' already exists`
+        message: 'A record with that value already exists'
       }
     });
   }
@@ -83,11 +80,12 @@ function errorHandler(err, req, res, next) {
   }
 
   // Default: internal server error
+  console.error('[500] Unexpected error:', err.message);
   res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: env.isProduction() ? 'An unexpected error occurred' : err.message
+      message: 'An unexpected error occurred'
     }
   });
 }

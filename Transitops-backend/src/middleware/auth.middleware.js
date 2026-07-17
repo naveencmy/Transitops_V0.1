@@ -32,7 +32,7 @@ async function authenticate(req, res, next) {
       throw new UnauthorizedError('Access token is required');
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
 
     // Load user with role from database
     const userResult = await query(`

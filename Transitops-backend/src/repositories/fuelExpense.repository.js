@@ -30,7 +30,7 @@ class FuelExpenseRepository {
   }
 
   async createFuelLog(fuelData, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const { vehicle_id, trip_id, liters, cost_per_liter, total_cost, odometer_reading, station } = fuelData;
     const result = await executor(`
       INSERT INTO fuel_logs (vehicle_id, trip_id, liters, cost_per_liter, total_cost, odometer_reading, station)
@@ -95,7 +95,7 @@ class FuelExpenseRepository {
   }
 
   async createExpense(expenseData, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const { trip_id, vehicle_id, category, amount, description } = expenseData;
     const result = await executor(`
       INSERT INTO expenses (trip_id, vehicle_id, category, amount, description)

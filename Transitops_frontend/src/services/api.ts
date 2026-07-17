@@ -1,175 +1,159 @@
-// src/services/api.ts
+// const API_BASE_URL = '/api';export const API_DELAY = 0;
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1";
+const STORAGE_KEY = 'fleetpilot_session';
 
-const TOKEN_KEY = "transitops_token";
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
-export class ApiError extends Error {
-  status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
-class ApiClient {
-  private getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-
-  private buildHeaders(isJson = true): HeadersInit {
-    const headers: HeadersInit = {};
-
-    if (isJson) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    const token = this.getToken();
-
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    return headers;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const controller = new AbortController();
-
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  let token: string | undefined;
+  if (raw) {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}${endpoint}`,
-        {
-          ...options,
-          headers: {
-            ...this.buildHeaders(),
-            ...(options.headers || {})
-          },
-          signal: controller.signal
-        }
-      );
-
-      clearTimeout(timeout);
-
-      if (response.status === 401) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem("transitops_user");
-
-        window.location.href = "/login";
-
-        throw new ApiError(401, "Session expired");
-      }
-
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw new ApiError(
-          response.status,
-          json.message || "Request failed"
-        );
-      }
-
-      return json.data;
-    } catch (error) {
-      clearTimeout(timeout);
-
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      if (error instanceof DOMException) {
-        throw new ApiError(
-          408,
-          "Request timeout"
-        );
-      }
-
-      throw new ApiError(
-        500,
-        "Unable to connect to server"
-      );
-    }
+      const session = JSON.parse(raw);
+      token = session.token;
+    } catch { /* ignore */ }
   }
 
-  get<T>(endpoint: string) {
-    return this.request<T>(endpoint, {
-      method: "GET"
-    });
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  post<T>(endpoint: string, body?: unknown) {
-    return this.request<T>(endpoint, {
-      method: "POST",
-      body: JSON.stringify(body)
-    });
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.href = '/login';
+    throw new Error('Session expired');
   }
 
-  put<T>(endpoint: string, body?: unknown) {
-    return this.request<T>(endpoint, {
-      method: "PUT",
-      body: JSON.stringify(body)
-    });
-  }
-
-  patch<T>(endpoint: string, body?: unknown) {
-    return this.request<T>(endpoint, {
-      method: "PATCH",
-      body: JSON.stringify(body)
-    });
-  }
-
-  delete<T>(endpoint: string) {
-    return this.request<T>(endpoint, {
-      method: "DELETE"
-    });
-  }
+  return response;
 }
 
-export const api = new ApiClient();
+export async function mockRequest<T>(data: T, shouldFail = false): Promise<T> {return new Promise((resolve, reject) => {if (shouldFail) {reject(new Error('Request failed (mock)'));return;}resolve(data);});}
 
-export const tokenStorage = {
-  save(token: string) {
-    localStorage.setItem(TOKEN_KEY, token);
-  },
+export function formatDate(iso: string): string {return new Date(iso).toLocaleDateString('en-US', {year: 'numeric',month: 'short',day: 'numeric',});}
 
-  get() {
-    return localStorage.getItem(TOKEN_KEY);
-  },
+export function formatCurrency(value: number): string {return new Intl.NumberFormat('en-US', {style: 'currency',currency: 'INR',maximumFractionDigits: 0,}).format(value);}
 
-  clear() {
-    localStorage.removeItem(TOKEN_KEY);
-  }
+export function formatNumber(value: number): string {return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);}
+
+// Mapping functions: backend snake_case DB columns → frontend camelCase types
+
+const VEHICLE_STATUS_MAP: Record<string, string> = {
+  Available: 'Active',
+  OnTrip: 'Active',
+  InShop: 'Maintenance',
+  Retired: 'Retired',
 };
 
-export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0
-  }).format(value);
+const DRIVER_STATUS_MAP: Record<string, string> = {
+  Available: 'Off Duty',
+  OnTrip: 'On Duty',
+  Suspended: 'Suspended',
+};
+
+const TRIP_STATUS_MAP: Record<string, string> = {
+  Draft: 'Scheduled',
+  Dispatched: 'Dispatched',
+  InProgress: 'In Progress',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled',
+};
+
+const MAINTENANCE_STATUS_MAP: Record<string, string> = {
+  InProgress: 'In Progress',
+  Scheduled: 'Scheduled',
+  Completed: 'Completed',
+  Overdue: 'Overdue',
+};
+
+export function mapVehicle(v: any) {
+  return {
+    id: String(v.id),
+    plate: v.registration_number || '',
+    model: v.name || v.model || '',
+    type: v.type || 'Truck',
+    status: VEHICLE_STATUS_MAP[v.status] || v.status || 'Active',
+    capacityKg: Number(v.max_load_capacity_kg) || 0,
+    fuelLevel: Number(v.fuel_level) || 0,
+    odometerKm: Number(v.odometer_km) || 0,
+    nextMaintenanceKm: Number(v.next_maintenance_km) || 0,
+    driverId: v.assigned_vehicle_id ? String(v.assigned_vehicle_id) : null,
+  };
 }
 
-export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-IN", {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  });
+export function mapDriver(d: any) {
+  return {
+    id: String(d.id),
+    name: d.full_name || '',
+    phone: d.contact_number || '',
+    email: d.email || '',
+    licenseNumber: d.license_number || '',
+    licenseExpiry: d.license_expiry || '',
+    status: DRIVER_STATUS_MAP[d.status] || d.status || 'Off Duty',
+    rating: Number(d.safety_score) || 0,
+    totalTrips: Number(d.total_trips) || 0,
+    assignedVehicleId: d.assigned_vehicle_id ? String(d.assigned_vehicle_id) : null,
+  };
 }
 
-export function formatNumber(value: number) {
-  return new Intl.NumberFormat("en-IN").format(value);
+export function mapTrip(t: any) {
+  return {
+    id: t.trip_code || String(t.id),
+    origin: t.source || t.origin || '',
+    destination: t.destination || '',
+    distanceKm: Number(t.planned_distance_km || t.actual_distance_km) || 0,
+    departureTime: t.departure_time || t.dispatched_at || '',
+    arrivalTime: t.arrival_time || t.completed_at || '',
+    driverId: String(t.driver_id),
+    vehicleId: String(t.vehicle_id),
+    cargo: t.cargo_description || t.cargo || '',
+    weightTons: Number(t.cargo_weight_kg) ? Number(t.cargo_weight_kg) / 1000 : 0,
+    revenue: Number(t.revenue) || 0,
+    status: TRIP_STATUS_MAP[t.status] || t.status || 'Scheduled',
+    progress: Number(t.progress) || 0,
+  };
 }
+
+export function mapMaintenance(m: any) {
+  return {
+    id: String(m.id),
+    vehicleId: String(m.vehicle_id),
+    type: m.maintenance_type || m.type || '',
+    description: m.description || '',
+    status: MAINTENANCE_STATUS_MAP[m.status] || m.status || 'Scheduled',
+    scheduledDate: m.scheduled_date || '',
+    completedDate: m.completed_at || m.completed_date || null,
+    cost: Number(m.cost) || 0,
+    mechanic: m.mechanic || '',
+    notes: m.notes || m.description || '',
+  };
+}
+
+export function mapExpense(e: any) {
+  return {
+    id: String(e.id),
+    date: e.created_at || e.date || '',
+    category: e.category || 'Other',
+    description: e.description || '',
+    amount: Number(e.amount) || 0,
+    vehicleId: e.vehicle_id ? String(e.vehicle_id) : null,
+  };
+}
+
+export function mapFuelRecord(f: any) {
+  return {
+    id: String(f.id),
+    date: f.created_at || f.date || '',
+    vehicleId: String(f.vehicle_id),
+    liters: Number(f.liters) || 0,
+    costPerLiter: Number(f.cost_per_liter) || 0,
+    totalCost: Number(f.total_cost) || 0,
+    odometerKm: Number(f.odometer_reading) || 0,
+    station: f.station || '',
+  };
+}
+

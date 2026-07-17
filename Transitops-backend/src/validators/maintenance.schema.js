@@ -12,4 +12,11 @@ const maintenanceCreateSchema = Joi.object({
   scheduled_date: Joi.date().iso().optional().allow(null)
 });
 
-module.exports = { maintenanceCreateSchema };
+const maintenanceUpdateSchema = Joi.object({
+  maintenance_type: Joi.string().max(100).optional(),
+  description: Joi.string().max(500).optional().allow(''),
+  cost: Joi.number().min(0).optional().allow(null),
+  scheduled_date: Joi.date().iso().optional().allow(null)
+}).min(1);
+
+module.exports = { maintenanceCreateSchema, maintenanceUpdateSchema };

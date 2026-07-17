@@ -1,110 +1,49 @@
-import { api } from "./api";
+import type { Role } from '../config/permissions';
+import type { AppUser } from '../types';
 
-export interface ManagedUser {
+export interface ManagedUser {id: string;email: string;name: string;role: Role;created_at: string;}
 
-  id: number;
+export const userService = {
+  async getUsers(): Promise<AppUser[]> {
+    const response = await fetch('/api/v1/users');
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return response.json();
+  },
 
-  email: string;
+  async updateUserRole(id: string, role: Role): Promise<AppUser> {
+    const response = await fetch(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    if (!response.ok) throw new Error('Failed to update user role');
+    return response.json();
+  },
 
-  full_name: string;
+  async updateUserName(id: string, name: string): Promise<AppUser> {
+    const response = await fetch(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error('Failed to update user name');
+    return response.json();
+  },
 
-  phone: string;
+  async deleteUser(id: string): Promise<void> {
+    const response = await fetch(`/api/v1/users/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete user');
+  },
 
-  role: string;
-
-  status: string;
-
-  created_at: string;
-
-}
-
-export interface UpdateUserRoleDto {
-
-  role: string;
-
-}
-
-export interface UpdateUserDto {
-
-  full_name?: string;
-
-  phone?: string;
-
-  role?: string;
-
-  status?: string;
-
-}
-
-class UserService {
-
-  async getUsers() {
-
-    return api.get<ManagedUser[]>(
-      "/users"
-    );
-
-  }
-
-  async getUserById(id:number|string){
-
-    return api.get<ManagedUser>(
-      `/users/${id}`
-    );
-
-  }
-
-  async updateUser(
-
-    id:number|string,
-
-    data:UpdateUserDto
-
-  ){
-
-    return api.put<ManagedUser>(
-
-      `/users/${id}`,
-
-      data
-
-    );
-
-  }
-
-  async updateRole(
-
-    id:number|string,
-
-    role:string
-
-  ){
-
-    return api.put<ManagedUser>(
-
-      `/users/${id}/role`,
-
-      {role}
-
-    );
-
-  }
-
-  async deleteUser(
-
-    id:number|string
-
-  ){
-
-    return api.delete<void>(
-
-      `/users/${id}`
-
-    );
-
-  }
-
-}
-
-export const userService =
-new UserService();
+  async addUser(name: string, email: string, role: Role): Promise<AppUser> {
+    const response = await fetch('/api/v1/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, role }),
+    });
+    if (!response.ok) throw new Error('Failed to add user');
+    return response.json();
+  },
+};

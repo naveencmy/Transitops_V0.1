@@ -56,3 +56,6 @@ temp/
 
 # Debug
 .node_repl_history
+
+# digest file txt
+.txt

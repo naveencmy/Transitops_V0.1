@@ -1,27 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Wrench, Calendar, User as UserIcon, TriangleAlert as AlertTriangle, Play, CircleCheck as CheckCircle } from 'lucide-react';
-import { mockMaintenance, mockVehicles } from '../data/mockData';
 import { PageHeader, Button, Badge, StatCard, Modal, Input } from '../components/ui';
 import { formatNumber, formatDate } from '../services/format';
-import type { MaintenanceRecord, MaintenanceStatus } from '../types';
+import { maintenanceService } from '../services/maintenanceService';
+import { vehicleService } from '../services/vehicleService';
+import type { MaintenanceRecord, MaintenanceStatus, Vehicle } from '../types';
 
 export default function Maintenance() {
-  const [records, setRecords] = useState<MaintenanceRecord[]>(mockMaintenance);
+  const [records, setRecords] = useState<MaintenanceRecord[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<MaintenanceRecord | null>(null);
 
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [m, v] = await Promise.all([
+          maintenanceService.getRecords(),
+          vehicleService.getVehicles(),
+        ]);
+        setRecords(m);
+        setVehicles(v);
+      } catch (err) {
+        console.error('Failed to load maintenance records:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
   const filtered = filter === 'All' ? records : records.filter((r) => r.status === filter);
-  const vehiclePlate = (id: string) => mockVehicles.find((v) => v.id === id)?.plate ?? '—';
+  const vehiclePlate = (id: string) => vehicles.find((v) => v.id === id)?.plate ?? '—';
 
   const scheduled = records.filter((r) => r.status === 'Scheduled').length;
   const inProgress = records.filter((r) => r.status === 'In Progress').length;
   const overdue = records.filter((r) => r.status === 'Overdue').length;
   const totalCost = records.reduce((s, r) => s + r.cost, 0);
 
-  const updateStatus = (id: string, status: MaintenanceStatus) => {
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : r.completedDate } : r)));
-    setSelected((prev) => (prev?.id === id ? { ...prev, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : prev.completedDate } : prev));
+  const updateStatus = async (id: string, status: MaintenanceStatus) => {
+    try {
+      await maintenanceService.updateRecord(id, { status });
+      setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : r.completedDate } : r)));
+      setSelected((prev) => (prev?.id === id ? { ...prev, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : prev.completedDate } : prev));
+    } catch (err) {
+      console.error('Failed to update maintenance:', err);
+    }
   };
 
   const statusButtons: { status: MaintenanceStatus; label: string; icon: typeof Play; color: string }[] = [
@@ -29,6 +55,17 @@ export default function Maintenance() {
     { status: 'Completed', label: 'Completed', icon: CheckCircle, color: 'emerald' },
     { status: 'Overdue', label: 'Overdue', icon: AlertTriangle, color: 'rose' },
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Maintenance" subtitle="Loading..." />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-sm text-slate-400">Loading maintenance records...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -74,7 +111,7 @@ export default function Maintenance() {
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
             <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
-              {mockVehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} — {v.model}</option>)}
+              {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} — {v.model}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">

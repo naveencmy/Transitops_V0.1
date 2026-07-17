@@ -47,7 +47,7 @@ class MaintenanceRepository {
   }
 
   async create(maintenanceData, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const { vehicle_id, maintenance_type, description, cost, scheduled_date } = maintenanceData;
     const result = await executor(`
       INSERT INTO maintenance_logs (vehicle_id, maintenance_type, description, cost, status, scheduled_date)
@@ -58,13 +58,14 @@ class MaintenanceRepository {
   }
 
   async update(id, updates, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
+    const ALLOWED_COLUMNS = ['maintenance_type', 'description', 'cost', 'scheduled_date'];
     const fields = [];
     const values = [];
     let idx = 1;
 
     for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
+      if (value !== undefined && ALLOWED_COLUMNS.includes(key)) {
         fields.push(`${key} = $${idx++}`);
         values.push(value);
       }
@@ -82,7 +83,7 @@ class MaintenanceRepository {
   }
 
   async close(id, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const result = await executor(`
       UPDATE maintenance_logs 
       SET status = 'Completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP

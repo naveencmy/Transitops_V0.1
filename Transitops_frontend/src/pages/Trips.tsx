@@ -1,16 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, MapPin, Clock, Package, Send, Ban, TriangleAlert as AlertTriangle } from 'lucide-react';
-import { mockTrips, mockVehicles, mockDrivers } from '../data/mockData';
 import { PageHeader, Button, Badge, Card, Modal, Input } from '../components/ui';
 import { formatNumber } from '../services/format';
+import { tripService } from '../services/tripService';
+import { vehicleService } from '../services/vehicleService';
+import { driverService } from '../services/driverService';
 import type { Trip, Vehicle, Driver, TripStatus } from '../types';
 
 export default function Trips() {
-  const [trips, setTrips] = useState<Trip[]>(mockTrips);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Trip | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [t, v, d] = await Promise.all([
+          tripService.getTrips(),
+          vehicleService.getVehicles(),
+          driverService.getDrivers(),
+        ]);
+        setTrips(t);
+        setVehicles(v);
+        setDrivers(d);
+      } catch (err) {
+        console.error('Failed to load trips:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const filtered = trips.filter((t) => {
     const matchesQuery = t.origin.toLowerCase().includes(query.toLowerCase()) || t.destination.toLowerCase().includes(query.toLowerCase()) || t.id.toLowerCase().includes(query.toLowerCase());
@@ -18,16 +43,32 @@ export default function Trips() {
     return matchesQuery && matchesFilter;
   });
 
-  const driverName = (id: string) => mockDrivers.find((d) => d.id === id)?.name ?? '—';
-  const vehiclePlate = (id: string) => mockVehicles.find((v) => v.id === id)?.plate ?? '—';
+  const driverName = (id: string) => drivers.find((d) => d.id === id)?.name ?? '—';
+  const vehiclePlate = (id: string) => vehicles.find((v) => v.id === id)?.plate ?? '—';
 
-  const updateTripStatus = (id: string, status: TripStatus) => {
-    setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
-    setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+  const updateTripStatus = async (id: string, status: TripStatus) => {
+    try {
+      await tripService.updateTrip(id, { status });
+      setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+      setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+    } catch (err) {
+      console.error('Failed to update trip:', err);
+    }
   };
 
   const canDispatch = (t: Trip) => t.status === 'Scheduled' || t.status === 'Delayed';
   const canCancel = (t: Trip) => t.status !== 'Completed' && t.status !== 'Cancelled';
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Trips" subtitle="Loading..." />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-sm text-slate-400">Loading trips...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -89,7 +130,7 @@ export default function Trips() {
         </div>
       </Card>
 
-      <ScheduleTripModal open={addOpen} onClose={() => setAddOpen(false)} vehicles={mockVehicles} drivers={mockDrivers} />
+      <ScheduleTripModal open={addOpen} onClose={() => setAddOpen(false)} vehicles={vehicles} drivers={drivers} />
 
       <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title="Trip Details" size="lg">
         {selected && (

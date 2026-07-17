@@ -84,15 +84,15 @@ class TripService {
     });
   }
 
-  async generateUniqueTripCode() {
+  async generateUniqueTripCode(attempt = 0) {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
     const code = `TRP-${String(timestamp).slice(-4)}${String(random).padStart(3, '0')}`;
 
-    // Ensure uniqueness
+    // Ensure uniqueness (max 10 retries)
     const existing = await tripRepository.findByTripCode(code);
-    if (existing) {
-      return this.generateUniqueTripCode();
+    if (existing && attempt < 10) {
+      return this.generateUniqueTripCode(attempt + 1);
     }
     return code;
   }

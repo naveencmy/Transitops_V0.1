@@ -1,93 +1,42 @@
-import { api } from "./api";
+import type { Driver } from '../types';
+import { authFetch, mapDriver } from './api';
 
-export interface Driver {
-  id: number;
-  full_name: string;
-  license_number: string;
-  license_category: string;
-  license_expiry: string;
-  contact_number: string;
-  email: string;
-  safety_score: number;
-  total_trips: number;
-  assigned_vehicle_id: number | null;
-  status: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface DriverFilters {
-  status?: string;
-  search?: string;
-}
-
-export interface CreateDriverDto {
-  full_name: string;
-  license_number: string;
-  license_category: string;
-  license_expiry: string;
-  contact_number: string;
-  email: string;
-  safety_score?: number;
-  assigned_vehicle_id?: number | null;
-  status?: string;
-}
-
-export interface UpdateDriverDto extends Partial<CreateDriverDto> {}
-
-class DriverService {
-
-  async getDrivers(filters?: DriverFilters): Promise<Driver[]> {
-
-    const params = new URLSearchParams();
-
-    if (filters?.status)
-      params.append("status", filters.status);
-
-    if (filters?.search)
-      params.append("search", filters.search);
-
-    const query = params.toString();
-
-    return api.get<Driver[]>(
-      `/drivers${query ? `?${query}` : ""}`
-    );
-  }
-
-  async getDriverById(id: number | string): Promise<Driver> {
-    return api.get<Driver>(`/drivers/${id}`);
-  }
-
-  async createDriver(driver: CreateDriverDto): Promise<Driver> {
-    return api.post<Driver>("/drivers", driver);
-  }
-
-  async updateDriver(
-    id: number | string,
-    driver: UpdateDriverDto
-  ): Promise<Driver> {
-
-    return api.put<Driver>(
-      `/drivers/${id}`,
-      driver
-    );
-  }
-
-  async deleteDriver(id: number | string): Promise<void> {
-    return api.delete<void>(`/drivers/${id}`);
-  }
-
-  async getAvailableDrivers() {
-    return this.getDrivers({
-      status: "Available"
+export const driverService = {
+  async getDrivers(): Promise<Driver[]> {
+    const response = await authFetch('/api/v1/drivers');
+    if (!response.ok) throw new Error('Failed to fetch drivers');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapDriver) : [];
+  },
+  async getDriverById(id: string): Promise<Driver> {
+    const response = await authFetch(`/api/v1/drivers/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch driver');
+    const json = await response.json();
+    return mapDriver(json.data ?? json);
+  },
+  async createDriver(driverData: Partial<Driver>): Promise<Driver> {
+    const response = await authFetch('/api/v1/drivers', {
+      method: 'POST',
+      body: JSON.stringify(driverData),
     });
-  }
-
-  async searchDrivers(search: string) {
-    return this.getDrivers({
-      search
+    if (!response.ok) throw new Error('Failed to create driver');
+    const json = await response.json();
+    return mapDriver(json.data ?? json);
+  },
+  async updateDriver(id: string, driverData: Partial<Driver>): Promise<Driver> {
+    const response = await authFetch(`/api/v1/drivers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(driverData),
     });
-  }
-}
-
-export const driverService = new DriverService();
+    if (!response.ok) throw new Error('Failed to update driver');
+    const json = await response.json();
+    return mapDriver(json.data ?? json);
+  },
+  async deleteDriver(id: string): Promise<void> {
+    const response = await authFetch(`/api/v1/drivers/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete driver');
+  },
+};

@@ -18,7 +18,7 @@ function Protected({ module, children }: { module: ModuleKey; children: React.Re
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Protected module="dashboard"><Dashboard /></Protected>} />

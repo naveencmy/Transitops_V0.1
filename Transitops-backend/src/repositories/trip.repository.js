@@ -82,13 +82,14 @@ class TripRepository {
   }
 
   async update(id, updates, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
+    const ALLOWED_COLUMNS = ['source', 'destination', 'vehicle_id', 'driver_id', 'cargo_weight_kg', 'planned_distance_km', 'actual_distance_km', 'fuel_consumed_liters', 'revenue', 'status', 'dispatched_at', 'completed_at'];
     const fields = [];
     const values = [];
     let idx = 1;
 
     for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
+      if (value !== undefined && ALLOWED_COLUMNS.includes(key)) {
         fields.push(`${key} = $${idx++}`);
         values.push(value);
       }
@@ -106,7 +107,7 @@ class TripRepository {
   }
 
   async updateStatus(id, status, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const updates = { status };
 
     if (status === 'Dispatched') {

@@ -1,125 +1,43 @@
-import { api } from "./api";
+import type { MaintenanceRecord } from '../types';
+import { authFetch, mapMaintenance } from './api';
 
-export interface MaintenanceRecord {
-  id: number;
-  vehicle_id: number;
-  maintenance_type: string;
-  description: string;
-  cost: number;
-  mechanic: string;
-  status: string;
-  scheduled_date: string;
-  started_at?: string;
-  completed_at?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface MaintenanceFilters {
-  status?: string;
-  vehicle_id?: number;
-}
-
-export interface CreateMaintenanceDto {
-  vehicle_id: number;
-  maintenance_type: string;
-  description: string;
-  cost: number;
-  mechanic: string;
-  scheduled_date: string;
-}
-
-export interface UpdateMaintenanceDto
-  extends Partial<CreateMaintenanceDto> {}
-
-class MaintenanceService {
-
-  async getRecords(
-    filters?: MaintenanceFilters
-  ): Promise<MaintenanceRecord[]> {
-
-    const params = new URLSearchParams();
-
-    if (filters?.status)
-      params.append("status", filters.status);
-
-    if (filters?.vehicle_id)
-      params.append("vehicle_id", String(filters.vehicle_id));
-
-    const query = params.toString();
-
-    return api.get<MaintenanceRecord[]>(
-      `/maintenance${query ? `?${query}` : ""}`
-    );
-  }
-
-  async getRecordById(
-    id: number | string
-  ): Promise<MaintenanceRecord> {
-
-    return api.get<MaintenanceRecord>(
-      `/maintenance/${id}`
-    );
-  }
-
-  async createRecord(
-    data: CreateMaintenanceDto
-  ): Promise<MaintenanceRecord> {
-
-    return api.post<MaintenanceRecord>(
-      "/maintenance",
-      data
-    );
-  }
-
-  async updateRecord(
-    id: number | string,
-    data: UpdateMaintenanceDto
-  ): Promise<MaintenanceRecord> {
-
-    return api.put<MaintenanceRecord>(
-      `/maintenance/${id}`,
-      data
-    );
-  }
-
-  async closeRecord(
-    id: number | string
-  ): Promise<MaintenanceRecord> {
-
-    return api.post<MaintenanceRecord>(
-      `/maintenance/${id}/close`
-    );
-  }
-
-  async deleteRecord(
-    id: number | string
-  ): Promise<void> {
-
-    return api.delete<void>(
-      `/maintenance/${id}`
-    );
-  }
-
-  async getScheduledRecords() {
-    return this.getRecords({
-      status: "Scheduled"
+export const maintenanceService = {
+  async getRecords(): Promise<MaintenanceRecord[]> {
+    const response = await authFetch('/api/v1/maintenance');
+    if (!response.ok) throw new Error('Failed to fetch maintenance records');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapMaintenance) : [];
+  },
+  async getRecordsByVehicle(vehicleId: string): Promise<MaintenanceRecord[]> {
+    const response = await authFetch(`/api/v1/maintenance?vehicleId=${encodeURIComponent(vehicleId)}`);
+    if (!response.ok) throw new Error('Failed to fetch maintenance records');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapMaintenance) : [];
+  },
+  async createRecord(recordData: Partial<MaintenanceRecord>): Promise<MaintenanceRecord> {
+    const response = await authFetch('/api/v1/maintenance', {
+      method: 'POST',
+      body: JSON.stringify(recordData),
     });
-  }
-
-  async getCompletedRecords() {
-    return this.getRecords({
-      status: "Completed"
+    if (!response.ok) throw new Error('Failed to create maintenance record');
+    const json = await response.json();
+    return mapMaintenance(json.data ?? json);
+  },
+  async updateRecord(id: string, recordData: Partial<MaintenanceRecord>): Promise<MaintenanceRecord> {
+    const response = await authFetch(`/api/v1/maintenance/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(recordData),
     });
-  }
-
-  async getInProgressRecords() {
-    return this.getRecords({
-      status: "InProgress"
+    if (!response.ok) throw new Error('Failed to update maintenance record');
+    const json = await response.json();
+    return mapMaintenance(json.data ?? json);
+  },
+  async deleteRecord(id: string): Promise<void> {
+    const response = await authFetch(`/api/v1/maintenance/${id}`, {
+      method: 'DELETE',
     });
-  }
-
-}
-
-export const maintenanceService =
-  new MaintenanceService();
+    if (!response.ok) throw new Error('Failed to delete maintenance record');
+  },
+};

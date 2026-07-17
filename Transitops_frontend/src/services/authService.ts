@@ -1,92 +1,93 @@
-import { api, tokenStorage } from "./api";
+import type { AppUser, Role } from '../types';
+import { authFetch } from './api';
 
-const USER_KEY = "transitops_user";
+const STORAGE_KEY = 'fleetpilot_session';
 
-export interface User {
-  id: number;
-  email: string;
-  full_name: string;
-  role: string;
-}
+export const authService = {
+  async login(email: string, password: string): Promise<AppUser> {
+    if (!email || !password) throw new Error('Email and password are required');
 
-interface LoginResponse {
-  accessToken: string;
-  user: User;
-}
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-class AuthService {
-  async login(email: string, password: string): Promise<User> {
-    if (!email.trim()) {
-      throw new Error("Email is required");
+    if (!response.ok) {
+      const body = await response.json();
+      throw new Error(body.error?.message || body.message || 'Invalid email or password');
     }
 
-    if (!password.trim()) {
-      throw new Error("Password is required");
-    }
-
-    const result = await api.post<LoginResponse>(
-      "/auth/login",
-      {
-        email,
-        password,
-      }
-    );
-
-    tokenStorage.save(result.accessToken);
-
-    localStorage.setItem(
-      USER_KEY,
-      JSON.stringify(result.user)
-    );
-
-    return result.user;
-  }
-
-  async getProfile(): Promise<User> {
-    const user = await api.get<User>(
-      "/auth/profile"
-    );
-
-    localStorage.setItem(
-      USER_KEY,
-      JSON.stringify(user)
-    );
-
+    const body = await response.json();
+    const raw = body.data;
+    const user: AppUser = {
+      id: String(raw.user.id),
+      email: raw.user.email,
+      name: raw.user.full_name,
+      role: raw.user.role,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...user, token: raw.token }));
     return user;
-  }
+  },
 
   logout(): void {
-    tokenStorage.clear();
-    localStorage.removeItem(USER_KEY);
-  }
+    localStorage.removeItem(STORAGE_KEY);
+  },
 
-  getCurrentUser(): User | null {
-    const raw = localStorage.getItem(USER_KEY);
-
+  getCurrentUser(): AppUser | null {
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-
     try {
-      return JSON.parse(raw);
+      return JSON.parse(raw) as AppUser;
     } catch {
       return null;
     }
-  }
+  },
 
   isAuthenticated(): boolean {
-    return tokenStorage.get() !== null;
-  }
+    return Boolean(localStorage.getItem(STORAGE_KEY));
+  },
+};
 
-  getRole(): string | null {
-    return this.getCurrentUser()?.role ?? null;
-  }
+export const userService = {
+  async getUsers(): Promise<AppUser[]> {
+    const response = await authFetch('/api/v1/users');
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return response.json();
+  },
 
-  hasRole(...roles: string[]): boolean {
-    const role = this.getRole();
+  async updateUserRole(id: string, role: Role): Promise<AppUser> {
+    const response = await authFetch(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+    if (!response.ok) throw new Error('Failed to update user role');
+    return response.json();
+  },
 
-    if (!role) return false;
+  async updateUserName(id: string, name: string): Promise<AppUser> {
+    const response = await authFetch(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error('Failed to update user name');
+    return response.json();
+  },
 
-    return roles.includes(role);
-  }
-}
+  async deleteUser(id: string): Promise<void> {
+    const response = await authFetch(`/api/v1/users/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete user');
+  },
 
-export const authService = new AuthService();
+  async addUser(name: string, email: string, role: Role): Promise<AppUser> {
+    const response = await authFetch('/api/v1/users', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, role }),
+    });
+    if (!response.ok) throw new Error('Failed to add user');
+    return response.json();
+  },
+};
+

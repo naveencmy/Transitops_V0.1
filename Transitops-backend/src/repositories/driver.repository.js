@@ -59,12 +59,13 @@ class DriverRepository {
   }
 
   async update(id, updates) {
+    const ALLOWED_COLUMNS = ['full_name', 'license_number', 'license_category', 'license_expiry', 'contact_number', 'safety_score', 'assigned_vehicle_id', 'user_id'];
     const fields = [];
     const values = [];
     let idx = 1;
 
     for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
+      if (value !== undefined && ALLOWED_COLUMNS.includes(key)) {
         fields.push(`${key} = $${idx++}`);
         values.push(value);
       }
@@ -89,7 +90,7 @@ class DriverRepository {
   }
 
   async updateStatus(id, status, client = null) {
-    const executor = client || query;
+    const executor = client ? (t, p) => client.query(t, p) : query;
     const result = await executor(`
       UPDATE drivers SET status = $1, updated_at = CURRENT_TIMESTAMP
       WHERE id = $2

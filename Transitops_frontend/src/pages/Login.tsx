@@ -5,28 +5,28 @@ import { authService } from '../services/authService';
 import { Button, Input } from '../components/ui';
 import type { Role } from '../types';
 
-const demoAccounts: { role: Role; email: string; label: string }[] = [
-  { role: 'Admin', email: 'admin@fleetco.com', label: 'Admin' },
-  { role: 'Fleet Manager', email: 'fleet@fleetco.com', label: 'Fleet Manager' },
-  { role: 'Dispatcher', email: 'dispatch@fleetco.com', label: 'Dispatcher' },
-  { role: 'Safety Officer', email: 'safety@fleetco.com', label: 'Safety Officer' },
-  { role: 'Financial Analyst', email: 'finance@fleetco.com', label: 'Financial Analyst' },
+const demoAccounts: { role: Role; email: string; label: string; password: string }[] = [
+  { role: 'Admin', email: 'admin@fleetco.com', label: 'Admin', password: 'admin123' },
+  { role: 'Fleet Manager', email: 'fleet@fleetco.com', label: 'Fleet Manager', password: 'fleet123' },
+  { role: 'Dispatcher', email: 'dispatch@fleetco.com', label: 'Dispatcher', password: 'dispatch123' },
+  { role: 'Safety Officer', email: 'safety@fleetco.com', label: 'Safety Officer', password: 'safety123' },
+  { role: 'Financial Analyst', email: 'finance@fleetco.com', label: 'Financial Analyst', password: 'finance123' },
 ];
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('admin@fleetco.com');
-  const [password, setPassword] = useState('demo1234');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRole, setActiveRole] = useState<Role>('Admin');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      authService.login(email, password);
+      await authService.login(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -37,7 +37,7 @@ export default function Login() {
 
   const pickAccount = (acc: typeof demoAccounts[number]) => {
     setEmail(acc.email);
-    setPassword('demo1234');
+    setPassword(acc.password);
     setActiveRole(acc.role);
   };
 
@@ -72,7 +72,7 @@ export default function Login() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">Password for all accounts: demo1234</p>
+            <p className="mt-2 text-[11px] text-slate-400">Password: {demoAccounts.find(a => a.role === activeRole)?.password}</p>
           </div>
 
           {/* Login Form */}

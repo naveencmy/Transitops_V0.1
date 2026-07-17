@@ -25,8 +25,7 @@ const vehicleUpdateSchema = Joi.object({
   type: Joi.string().max(50).optional().allow(''),
   max_load_capacity_kg: Joi.number().positive().optional(),
   odometer_km: Joi.number().min(0).optional(),
-  acquisition_cost: Joi.number().min(0).optional().allow(null),
-  status: Joi.string().valid('Available', 'OnTrip', 'InShop', 'Retired').optional()
-});
+  acquisition_cost: Joi.number().min(0).optional().allow(null)
+}).min(1);
 
 module.exports = { vehicleCreateSchema, vehicleUpdateSchema };

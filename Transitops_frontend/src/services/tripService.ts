@@ -1,151 +1,56 @@
-import { api } from "./api";
+import type { Trip } from '../types';
+import { authFetch, mapTrip } from './api';
 
-export interface Trip {
-  id: number;
-  trip_code: string;
-  source: string;
-  destination: string;
-  vehicle_id: number;
-  driver_id: number;
-  cargo_weight_kg: number;
-  cargo_description?: string;
-  planned_distance_km: number;
-  actual_distance_km?: number;
-  fuel_consumed_liters?: number;
-  revenue?: number;
-  departure_time?: string;
-  arrival_time?: string;
-  status: string;
-  dispatched_at?: string;
-  completed_at?: string;
-}
-
-export interface TripFilters {
-  status?: string;
-  vehicle_id?: number;
-  driver_id?: number;
-}
-
-export interface CreateTripDto {
-  source: string;
-  destination: string;
-  vehicle_id: number;
-  driver_id: number;
-  cargo_weight_kg: number;
-  cargo_description?: string;
-  planned_distance_km: number;
-  revenue?: number;
-  departure_time?: string;
-}
-
-export interface UpdateTripDto
-  extends Partial<CreateTripDto> {}
-
-class TripService {
-
-  async getTrips(filters?: TripFilters): Promise<Trip[]> {
-
-    const params = new URLSearchParams();
-
-    if (filters?.status)
-      params.append("status", filters.status);
-
-    if (filters?.vehicle_id)
-      params.append("vehicle_id", String(filters.vehicle_id));
-
-    if (filters?.driver_id)
-      params.append("driver_id", String(filters.driver_id));
-
-    const query = params.toString();
-
-    return api.get<Trip[]>(
-      `/trips${query ? `?${query}` : ""}`
-    );
-  }
-
-  async getTripById(
-    id: number | string
-  ): Promise<Trip> {
-
-    return api.get<Trip>(
-      `/trips/${id}`
-    );
-  }
-
-  async createTrip(
-    trip: CreateTripDto
-  ): Promise<Trip> {
-
-    return api.post<Trip>(
-      "/trips",
-      trip
-    );
-  }
-
-  async updateTrip(
-    id: number | string,
-    trip: UpdateTripDto
-  ): Promise<Trip> {
-
-    return api.put<Trip>(
-      `/trips/${id}`,
-      trip
-    );
-  }
-
-  async deleteTrip(
-    id: number | string
-  ): Promise<void> {
-
-    return api.delete<void>(
-      `/trips/${id}`
-    );
-  }
-
-  async dispatchTrip(
-    id: number | string
-  ): Promise<Trip> {
-
-    return api.post<Trip>(
-      `/trips/${id}/dispatch`
-    );
-  }
-
-  async completeTrip(
-    id: number | string
-  ): Promise<Trip> {
-
-    return api.post<Trip>(
-      `/trips/${id}/complete`
-    );
-  }
-
-  async cancelTrip(
-    id: number | string
-  ): Promise<Trip> {
-
-    return api.post<Trip>(
-      `/trips/${id}/cancel`
-    );
-  }
-
-  async getDraftTrips() {
-    return this.getTrips({
-      status: "Draft"
+export const tripService = {
+  async getTrips(): Promise<Trip[]> {
+    const response = await authFetch('/api/v1/trips');
+    if (!response.ok) throw new Error('Failed to fetch trips');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapTrip) : [];
+  },
+  async getTripById(id: string): Promise<Trip> {
+    const response = await authFetch(`/api/v1/trips/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch trip');
+    const json = await response.json();
+    return mapTrip(json.data ?? json);
+  },
+  async getTripsByDriver(driverId: string): Promise<Trip[]> {
+    const response = await authFetch(`/api/v1/trips?driverId=${encodeURIComponent(driverId)}`);
+    if (!response.ok) throw new Error('Failed to fetch trips');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapTrip) : [];
+  },
+  async getTripsByVehicle(vehicleId: string): Promise<Trip[]> {
+    const response = await authFetch(`/api/v1/trips?vehicleId=${encodeURIComponent(vehicleId)}`);
+    if (!response.ok) throw new Error('Failed to fetch trips');
+    const json = await response.json();
+    const data = json.data ?? json;
+    return Array.isArray(data) ? data.map(mapTrip) : [];
+  },
+  async createTrip(tripData: Partial<Trip>): Promise<Trip> {
+    const response = await authFetch('/api/v1/trips', {
+      method: 'POST',
+      body: JSON.stringify(tripData),
     });
-  }
-
-  async getDispatchedTrips() {
-    return this.getTrips({
-      status: "Dispatched"
+    if (!response.ok) throw new Error('Failed to create trip');
+    const json = await response.json();
+    return mapTrip(json.data ?? json);
+  },
+  async updateTrip(id: string, tripData: Partial<Trip>): Promise<Trip> {
+    const response = await authFetch(`/api/v1/trips/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(tripData),
     });
-  }
-
-  async getCompletedTrips() {
-    return this.getTrips({
-      status: "Completed"
+    if (!response.ok) throw new Error('Failed to update trip');
+    const json = await response.json();
+    return mapTrip(json.data ?? json);
+  },
+  async deleteTrip(id: string): Promise<void> {
+    const response = await authFetch(`/api/v1/trips/${id}`, {
+      method: 'DELETE',
     });
-  }
-}
-
-export const tripService = new TripService();
+    if (!response.ok) throw new Error('Failed to delete trip');
+  },
+};

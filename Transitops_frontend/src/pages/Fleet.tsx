@@ -1,18 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Truck, Fuel, Gauge, Plus } from 'lucide-react';
-import { mockVehicles, mockDrivers } from '../data/mockData';
 import { PageHeader, Card, Badge, Button, Input, StatCard, Modal } from '../components/ui';
 import { formatNumber } from '../services/format';
-import type { Vehicle } from '../types';
+import { vehicleService } from '../services/vehicleService';
+import { driverService } from '../services/driverService';
+import type { Vehicle, Driver } from '../types';
 
 export default function Fleet() {
-  const [vehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Vehicle | null>(null);
 
-  const driverName = (id: string | null) => mockDrivers.find((d) => d.id === id)?.name ?? 'Unassigned';
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [v, d] = await Promise.all([
+          vehicleService.getVehicles(),
+          driverService.getDrivers(),
+        ]);
+        setVehicles(v);
+        setDrivers(d);
+      } catch (err) {
+        console.error('Failed to load vehicles:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const driverName = (id: string | null) => drivers.find((d) => d.id === id)?.name ?? 'Unassigned';
 
   const filtered = vehicles.filter((v) => {
     const matchesQuery = v.plate.toLowerCase().includes(query.toLowerCase()) || v.model.toLowerCase().includes(query.toLowerCase());
@@ -23,7 +44,18 @@ export default function Fleet() {
   const active = vehicles.filter((v) => v.status === 'Active').length;
   const maintenance = vehicles.filter((v) => v.status === 'Maintenance').length;
   const idle = vehicles.filter((v) => v.status === 'Idle').length;
-  const avgFuel = Math.round(vehicles.reduce((s, v) => s + v.fuelLevel, 0) / vehicles.length);
+  const avgFuel = vehicles.length > 0 ? Math.round(vehicles.reduce((s, v) => s + v.fuelLevel, 0) / vehicles.length) : 0;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Fleet" subtitle="Loading..." />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-sm text-slate-400">Loading fleet data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,0 +1,3 @@
+import { monthlyRevenue, weeklyTrips, fleetUtilization } from '../data/mockData';import type { SeriesPoint } from '../types';import { mockRequest } from './api';
+
+export const analyticsService = {async getMonthlyRevenue(): Promise<SeriesPoint[]> {return mockRequest(monthlyRevenue);},async getWeeklyTrips(): Promise<SeriesPoint[]> {return mockRequest(weeklyTrips);},async getFleetUtilization(): Promise<SeriesPoint[]> {return mockRequest(fleetUtilization);},};
