@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const { query } = require('../src/config/database');
 const bcrypt = require('bcryptjs');
@@ -6,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const BCRYPT_ROUNDS = 12;
 
 async function seed() {
-  console.log('🌱 Starting database seed...\n');
+  console.log(' Starting database seed...\\n');
 
   try {
     
@@ -26,16 +25,16 @@ async function seed() {
     const rolesResult = await query('SELECT id, name FROM roles');
     const roles = {};
     rolesResult.rows.forEach(r => roles[r.name] = r.id);
-    console.log(`   ✓ ${rolesResult.rows.length} roles created`);
+    console.log(`    ${rolesResult.rows.length} roles created`);
 
-    console.log('\n👤 Seeding users...');
+    console.log('\\n Seeding users...');
 
     const users = [
-      { email: 'admin@fleetco.com', password: 'admin123', name: 'Alex Morgan', phone: '+1 713-555-0100', role: 'Admin' },
-      { email: 'fleet@fleetco.com', password: 'fleet123', name: 'Sofia Chen', phone: '+1 713-555-0200', role: 'FleetManager' },
-      { email: 'dispatch@fleetco.com', password: 'dispatch123', name: 'James Okafor', phone: '+1 713-555-0300', role: 'Dispatcher' },
-      { email: 'safety@fleetco.com', password: 'safety123', name: 'Priya Nair', phone: '+1 713-555-0400', role: 'SafetyOfficer' },
-      { email: 'finance@fleetco.com', password: 'finance123', name: 'Liam Murphy', phone: '+1 713-555-0500', role: 'FinancialAnalyst' }
+      { email: 'admin@tnfleet.in', password: 'admin123', name: 'Arumugam Pillai', phone: '+91 98432 10001', role: 'Admin' },
+      { email: 'fleet@tnfleet.in', password: 'fleet123', name: 'Lakshmi Narayanan', phone: '+91 98432 10002', role: 'FleetManager' },
+      { email: 'dispatch@tnfleet.in', password: 'dispatch123', name: 'Karthikeyan Subramanian', phone: '+91 98432 10003', role: 'Dispatcher' },
+      { email: 'safety@tnfleet.in', password: 'safety123', name: 'Meenakshi Sundaram', phone: '+91 98432 10004', role: 'SafetyOfficer' },
+      { email: 'finance@tnfleet.in', password: 'finance123', name: 'Venkatesh Iyer', phone: '+91 98432 10005', role: 'FinancialAnalyst' }
     ];
 
     for (const user of users) {
@@ -49,18 +48,18 @@ async function seed() {
           role_id = EXCLUDED.role_id
       `, [user.email, hash, user.name, user.phone, roles[user.role]]);
     }
-    console.log(`   ✓ ${users.length} users created`);
+    console.log(`    ${users.length} users created`);
 
-    console.log('\n Seeding vehicles...');
+    console.log('\\n Seeding vehicles...');
 
     const vehicles = [
-      { reg: 'TX-7782', name: 'Freightliner Cascadia', model: 'Cascadia', type: 'Truck', capacity: 12000, odo: 145230, cost: 85000, fuel: 78, status: 'Available' },
-      { reg: 'TX-7783', name: 'Kenworth T680', model: 'T680', type: 'Truck', capacity: 18000, odo: 98450, cost: 92000, fuel: 45, status: 'Available' },
-      { reg: 'TX-7784', name: 'Volvo VNL 760', model: 'VNL 760', type: 'Truck', capacity: 15000, odo: 210800, cost: 78000, fuel: 90, status: 'InShop' },
-      { reg: 'TX-7785', name: 'Ford Transit 350', model: 'Transit 350', type: 'Van', capacity: 3500, odo: 54300, cost: 35000, fuel: 62, status: 'Available' },
-      { reg: 'TX-7786', name: 'Peterbilt 579', model: '579', type: 'Truck', capacity: 16000, odo: 178900, cost: 88000, fuel: 30, status: 'Available' },
-      { reg: 'TX-7787', name: 'International LT', model: 'LT Series', type: 'Truck', capacity: 14000, odo: 67200, cost: 75000, fuel: 85, status: 'Available' },
-      { reg: 'TX-7788', name: 'Mercedes Sprinter', model: 'Sprinter', type: 'Van', capacity: 3000, odo: 32100, cost: 42000, fuel: 55, status: 'Available' }
+      { reg: 'TN-01-AB-7782', name: 'Ashok Leyland 3118', model: '3118 XL', type: 'Truck', capacity: 12000, odo: 145230, cost: 2850000, fuel: 78, status: 'Available' },
+      { reg: 'TN-01-AB-7783', name: 'BharatBenz 2523R', model: '2523R', type: 'Truck', capacity: 18000, odo: 98450, cost: 3200000, fuel: 45, status: 'Available' },
+      { reg: 'TN-01-AB-7784', name: 'Tata Prima 5530', model: 'Prima 5530.S', type: 'Truck', capacity: 15000, odo: 210800, cost: 2650000, fuel: 90, status: 'InShop' },
+      { reg: 'TN-01-AB-7785', name: 'Mahindra Supro Maxitruck', model: 'Supro Maxitruck', type: 'Van', capacity: 3500, odo: 54300, cost: 650000, fuel: 62, status: 'Available' },
+      { reg: 'TN-01-AB-7786', name: 'Eicher Pro 6035', model: 'Pro 6035', type: 'Truck', capacity: 16000, odo: 178900, cost: 2900000, fuel: 30, status: 'Available' },
+      { reg: 'TN-01-AB-7787', name: 'Ashok Leyland 4825', model: '4825 Tipper', type: 'Truck', capacity: 14000, odo: 67200, cost: 2750000, fuel: 85, status: 'Available' },
+      { reg: 'TN-01-AB-7788', name: 'Force Traveller 4020', model: 'Traveller 4020', type: 'Van', capacity: 3000, odo: 32100, cost: 1800000, fuel: 55, status: 'Available' }
     ];
 
     for (const v of vehicles) {
@@ -80,15 +79,15 @@ async function seed() {
     }
     console.log(`   ✓ ${vehicles.length} vehicles created`);
 
-    console.log('\n Seeding drivers...');
+    console.log('\\n Seeding drivers...');
 
     const drivers = [
-      { name: 'Marcus Johnson', license: 'CDL-A-99201', category: 'Class A', expiry: '2027-08-15', phone: '+1 713-555-0101', score: 4.8, trips: 342, status: 'Available', vehicle: 'TX-7782' },
-      { name: 'Sarah Williams', license: 'CDL-A-99202', category: 'Class A', expiry: '2026-11-02', phone: '+1 713-555-0102', score: 4.9, trips: 410, status: 'Available', vehicle: 'TX-7783' },
-      { name: 'David Brown', license: 'CDL-B-99203', category: 'Class B', expiry: '2027-06-10', phone: '+1 713-555-0103', score: 4.6, trips: 198, status: 'OffDuty', vehicle: 'TX-7785' },
-      { name: 'Emily Garcia', license: 'CDL-A-99204', category: 'Class A', expiry: '2026-09-30', phone: '+1 713-555-0104', score: 4.7, trips: 275, status: 'Available', vehicle: 'TX-7787' },
-      { name: 'Robert Lee', license: 'CDL-B-99205', category: 'Class B', expiry: '2028-01-20', phone: '+1 713-555-0105', score: 4.5, trips: 156, status: 'OffDuty', vehicle: 'TX-7788' },
-      { name: 'Jessica Martinez', license: 'CDL-A-99206', category: 'Class A', expiry: '2027-03-14', phone: '+1 713-555-0106', score: 4.9, trips: 389, status: 'Available', vehicle: null }
+      { name: 'Murugan Thangaraj', license: 'TN-CDL-A-99201', category: 'Heavy Goods Vehicle', expiry: '2027-08-15', phone: '+91 98432 10101', score: 4.8, trips: 342, status: 'Available', vehicle: 'TN-01-AB-7782' },
+      { name: 'Saroja Devi', license: 'TN-CDL-A-99202', category: 'Heavy Goods Vehicle', expiry: '2026-11-02', phone: '+91 98432 10102', score: 4.9, trips: 410, status: 'Available', vehicle: 'TN-01-AB-7783' },
+      { name: 'Palanisamy Gounder', license: 'TN-CDL-B-99203', category: 'Light Goods Vehicle', expiry: '2027-06-10', phone: '+91 98432 10103', score: 4.6, trips: 198, status: 'OffDuty', vehicle: 'TN-01-AB-7785' },
+      { name: 'Kavitha Rajendran', license: 'TN-CDL-A-99204', category: 'Heavy Goods Vehicle', expiry: '2026-09-30', phone: '+91 98432 10104', score: 4.7, trips: 275, status: 'Available', vehicle: 'TN-01-AB-7787' },
+      { name: 'Ramesh Kuppusamy', license: 'TN-CDL-B-99205', category: 'Light Goods Vehicle', expiry: '2028-01-20', phone: '+91 98432 10105', score: 4.5, trips: 156, status: 'OffDuty', vehicle: 'TN-01-AB-7788' },
+      { name: 'Lakshmi Priya', license: 'TN-CDL-A-99206', category: 'Heavy Goods Vehicle', expiry: '2027-03-14', phone: '+91 98432 10106', score: 4.9, trips: 389, status: 'Available', vehicle: null }
     ];
 
     for (const d of drivers) {
@@ -112,20 +111,20 @@ async function seed() {
           assigned_vehicle_id = EXCLUDED.assigned_vehicle_id,
           status = EXCLUDED.status
       `, [d.name, d.license, d.category, d.expiry, d.phone, 
-          d.name.toLowerCase().replace(' ', '.') + '@fleetco.com', 
+          d.name.toLowerCase().replace(' ', '.') + '@tnfleet.in', 
           d.score, d.trips, vehicleId, d.status]);
     }
-    console.log(`   ✓ ${drivers.length} drivers created`);
+    console.log(`    ${drivers.length} drivers created`);
 
-    console.log('\nSeeding sample trips...');
+    console.log('\\n Seeding sample trips...');
 
     const trips = [
-      { code: 'T-1001', source: 'Houston, TX', dest: 'New Orleans, LA', vehicle: 'TX-7782', driver: 'Marcus Johnson', cargo: 10000, distance: 568, revenue: 4200, status: 'InProgress', departure: '2026-07-12 06:00:00' },
-      { code: 'T-1002', source: 'Dallas, TX', dest: 'Oklahoma City, OK', vehicle: 'TX-7783', driver: 'Sarah Williams', cargo: 8000, distance: 322, revenue: 2800, status: 'Dispatched', departure: '2026-07-12 08:00:00' },
-      { code: 'T-1003', source: 'Austin, TX', dest: 'San Antonio, TX', vehicle: 'TX-7787', driver: 'Emily Garcia', cargo: 5000, distance: 128, revenue: 1500, status: 'Completed', departure: '2026-07-11 09:00:00' },
-      { code: 'T-1004', source: 'Houston, TX', dest: 'Dallas, TX', vehicle: 'TX-7786', driver: 'Jessica Martinez', cargo: 12000, distance: 385, revenue: 5100, status: 'Draft', departure: '2026-07-13 07:00:00' },
-      { code: 'T-1005', source: 'Fort Worth, TX', dest: 'Little Rock, AR', vehicle: 'TX-7782', driver: 'Marcus Johnson', cargo: 9000, distance: 560, revenue: 3800, status: 'Delayed', departure: '2026-07-10 05:00:00' },
-      { code: 'T-1006', source: 'San Antonio, TX', dest: 'El Paso, TX', vehicle: 'TX-7783', driver: 'Sarah Williams', cargo: 14000, distance: 880, revenue: 6200, status: 'Dispatched', departure: '2026-07-12 04:00:00' }
+      { code: 'T-1001', source: 'Chennai, TN', dest: 'Bangalore, KA', vehicle: 'TN-01-AB-7782', driver: 'Murugan Thangaraj', cargo: 10000, distance: 350, revenue: 28500, status: 'InProgress', departure: '2026-07-12 06:00:00' },
+      { code: 'T-1002', source: 'Coimbatore, TN', dest: 'Kochi, KL', vehicle: 'TN-01-AB-7783', driver: 'Saroja Devi', cargo: 8000, distance: 190, revenue: 18500, status: 'Dispatched', departure: '2026-07-12 08:00:00' },
+      { code: 'T-1003', source: 'Madurai, TN', dest: 'Trichy, TN', vehicle: 'TN-01-AB-7787', driver: 'Kavitha Rajendran', cargo: 5000, distance: 135, revenue: 9500, status: 'Completed', departure: '2026-07-11 09:00:00' },
+      { code: 'T-1004', source: 'Chennai, TN', dest: 'Salem, TN', vehicle: 'TN-01-AB-7786', driver: 'Lakshmi Priya', cargo: 12000, distance: 340, revenue: 32000, status: 'Draft', departure: '2026-07-13 07:00:00' },
+      { code: 'T-1005', source: 'Tiruppur, TN', dest: 'Hyderabad, TS', vehicle: 'TN-01-AB-7782', driver: 'Murugan Thangaraj', cargo: 9000, distance: 890, revenue: 52000, status: 'Delayed', departure: '2026-07-10 05:00:00' },
+      { code: 'T-1006', source: 'Salem, TN', dest: 'Visakhapatnam, AP', vehicle: 'TN-01-AB-7783', driver: 'Saroja Devi', cargo: 14000, distance: 1050, revenue: 68000, status: 'Dispatched', departure: '2026-07-12 04:00:00' }
     ];
 
     for (const t of trips) {
@@ -148,15 +147,15 @@ async function seed() {
             t.status === 'Completed' ? '2026-07-11 14:00:00' : null]);
       }
     }
-    console.log(`   ✓ ${trips.length} trips created`);
+    console.log(`    ${trips.length} trips created`);
 
-    console.log('\n🔧 Seeding maintenance records...');
+    console.log('\\n Seeding maintenance records...');
 
     const maintenance = [
-      { vehicle: 'TX-7784', type: 'Engine Repair', desc: 'Turbo unit ordered, awaiting delivery', cost: 3200, status: 'InProgress', mechanic: 'Erik Lund', date: '2026-07-08' },
-      { vehicle: 'TX-7782', type: 'Oil Change', desc: 'Next service at 150k km', cost: 280, status: 'Scheduled', mechanic: 'Auto Shop Pro', date: '2026-07-20' },
-      { vehicle: 'TX-7786', type: 'Brake Service', desc: 'Overdue - schedule immediately', cost: 850, status: 'Overdue', mechanic: 'Erik Lund', date: '2026-07-01' },
-      { vehicle: 'TX-7783', type: 'Tire Rotation', desc: 'All tires in good condition', cost: 420, status: 'Completed', mechanic: 'Auto Shop Pro', date: '2026-06-28' }
+      { vehicle: 'TN-01-AB-7784', type: 'Engine Repair', desc: 'Turbo unit ordered from Ashok Leyland, awaiting delivery', cost: 95000, status: 'InProgress', mechanic: 'Sundar Motors', date: '2026-07-08' },
+      { vehicle: 'TN-01-AB-7782', type: 'Oil Change', desc: 'Next service at 150k km', cost: 8500, status: 'Scheduled', mechanic: 'TVS Auto', date: '2026-07-20' },
+      { vehicle: 'TN-01-AB-7786', type: 'Brake Service', desc: 'Overdue - schedule immediately', cost: 25000, status: 'Overdue', mechanic: 'Sundar Motors', date: '2026-07-01' },
+      { vehicle: 'TN-01-AB-7783', type: 'Tire Rotation', desc: 'All tires in good condition', cost: 12000, status: 'Completed', mechanic: 'TVS Auto', date: '2026-06-28' }
     ];
 
     for (const m of maintenance) {
@@ -169,19 +168,19 @@ async function seed() {
         `, [vResult.rows[0].id, m.type, m.desc, m.cost, m.status, m.mechanic, m.date]);
       }
     }
-    console.log(`   ✓ ${maintenance.length} maintenance records created`);
+    console.log(`   ${maintenance.length} maintenance records created`);
 
-    console.log('\n💰 Seeding expenses...');
+    console.log('\\n Seeding expenses...');
 
     const expenses = [
-      { date: '2026-07-10', category: 'Fuel', desc: 'Diesel refill - TX-7782', vehicle: 'TX-7782', amount: 680 },
-      { date: '2026-07-09', category: 'Maintenance', desc: 'Oil change - TX-7783', vehicle: 'TX-7783', amount: 280 },
-      { date: '2026-07-08', category: 'Fuel', desc: 'Diesel refill - TX-7783', vehicle: 'TX-7783', amount: 720 },
-      { date: '2026-07-07', category: 'Tolls', desc: 'Highway tolls - T-1001', vehicle: 'TX-7782', amount: 85 },
-      { date: '2026-07-06', category: 'Maintenance', desc: 'Brake service - TX-7786', vehicle: 'TX-7786', amount: 850 },
-      { date: '2026-07-05', category: 'Insurance', desc: 'Monthly fleet insurance', vehicle: null, amount: 2400 },
-      { date: '2026-07-04', category: 'Fuel', desc: 'Diesel refill - TX-7787', vehicle: 'TX-7787', amount: 540 },
-      { date: '2026-07-03', category: 'Other', desc: 'Driver training program', vehicle: null, amount: 1200 }
+      { date: '2026-07-10', category: 'Fuel', desc: 'Diesel refill - TN-01-AB-7782', vehicle: 'TN-01-AB-7782', amount: 6800 },
+      { date: '2026-07-09', category: 'Maintenance', desc: 'Oil change - TN-01-AB-7783', vehicle: 'TN-01-AB-7783', amount: 8500 },
+      { date: '2026-07-08', category: 'Fuel', desc: 'Diesel refill - TN-01-AB-7783', vehicle: 'TN-01-AB-7783', amount: 7200 },
+      { date: '2026-07-07', category: 'Tolls', desc: 'Chennai-Bangalore tolls - T-1001', vehicle: 'TN-01-AB-7782', amount: 850 },
+      { date: '2026-07-06', category: 'Maintenance', desc: 'Brake service - TN-01-AB-7786', vehicle: 'TN-01-AB-7786', amount: 25000 },
+      { date: '2026-07-05', category: 'Insurance', desc: 'Monthly fleet insurance (United India)', vehicle: null, amount: 24000 },
+      { date: '2026-07-04', category: 'Fuel', desc: 'Diesel refill - TN-01-AB-7787', vehicle: 'TN-01-AB-7787', amount: 5400 },
+      { date: '2026-07-03', category: 'Other', desc: 'Driver training program - RTO Chennai', vehicle: null, amount: 12000 }
     ];
 
     for (const e of expenses) {
@@ -197,17 +196,17 @@ async function seed() {
         ON CONFLICT DO NOTHING
       `, [vId, e.category, e.amount, e.desc, e.date + ' 10:00:00']);
     }
-    console.log(`   ✓ ${expenses.length} expenses created`);
+    console.log(`   ${expenses.length} expenses created`);
 
 
-    console.log('\n Seeding fuel logs...');
+    console.log('\\n Seeding fuel logs...');
 
     const fuelLogs = [
-      { date: '2026-07-10', vehicle: 'TX-7782', liters: 180, cost: 1.65, total: 297.00, odo: 145230, station: 'Shell Station 12' },
-      { date: '2026-07-09', vehicle: 'TX-7783', liters: 220, cost: 1.68, total: 369.60, odo: 98450, station: 'Chevron Hub 7' },
-      { date: '2026-07-08', vehicle: 'TX-7787', liters: 150, cost: 1.62, total: 243.00, odo: 67200, station: 'ExpressFuel 3' },
-      { date: '2026-07-07', vehicle: 'TX-7789', liters: 200, cost: 1.67, total: 334.00, odo: 112400, station: 'Shell Station 12' },
-      { date: '2026-07-05', vehicle: 'TX-7785', liters: 65, cost: 1.70, total: 110.50, odo: 54300, station: 'Chevron Hub 7' }
+      { date: '2026-07-10', vehicle: 'TN-01-AB-7782', liters: 180, cost: 98.50, total: 17730.00, odo: 145230, station: 'Indian Oil - Guindy' },
+      { date: '2026-07-09', vehicle: 'TN-01-AB-7783', liters: 220, cost: 99.20, total: 21824.00, odo: 98450, station: 'Bharat Petroleum - Avinashi' },
+      { date: '2026-07-08', vehicle: 'TN-01-AB-7787', liters: 150, cost: 98.80, total: 14820.00, odo: 67200, station: 'HPCL - Salem Bypass' },
+      { date: '2026-07-07', vehicle: 'TN-01-AB-7789', liters: 200, cost: 99.50, total: 19900.00, odo: 112400, station: 'Indian Oil - Guindy' },
+      { date: '2026-07-05', vehicle: 'TN-01-AB-7785', liters: 65, cost: 100.20, total: 6513.00, odo: 54300, station: 'Bharat Petroleum - Avinashi' }
     ];
 
     for (const f of fuelLogs) {
@@ -220,18 +219,18 @@ async function seed() {
         `, [vResult.rows[0].id, f.liters, f.cost, f.total, f.odo, f.station, f.date + ' 08:00:00']);
       }
     }
-    console.log(`    ${fuelLogs.length} fuel logs created`);
+    console.log(`   ${fuelLogs.length} fuel logs created`);
 
-    console.log('\n Seed completed successfully!');
-    console.log('\n Login Credentials:');
-    console.log('   Admin:          admin@fleetco.com / admin123');
-    console.log('   Fleet Manager:  fleet@fleetco.com / fleet123');
-    console.log('   Dispatcher:     dispatch@fleetco.com / dispatch123');
-    console.log('   Safety Officer: safety@fleetco.com / safety123');
-    console.log('   Financial:      finance@fleetco.com / finance123');
+    console.log('\\nSeed completed successfully!');
+    console.log('\\nLogin Credentials:');
+    console.log('  Admin:          admin@tnfleet.in / admin123');
+    console.log('  Fleet Manager:  fleet@tnfleet.in / fleet123');
+    console.log('  Dispatcher:     dispatch@tnfleet.in / dispatch123');
+    console.log('  Safety Officer: safety@tnfleet.in / safety123');
+    console.log('  Financial:      finance@tnfleet.in / finance123');
 
   } catch (err) {
-    console.error('\nSeed failed:', err.message);
+    console.error('\\nSeed failed:', err.message);
     console.error(err.stack);
     process.exit(1);
   } finally {
