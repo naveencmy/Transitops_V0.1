@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: transitops-db
+    environment:
+      POSTGRES_DB: transitops_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../Transitops-backend/scripts/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../Transitops-backend
+      dockerfile: Dockerfile
+    container_name: transitops-backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/transitops_db
+      JWT_SECRET: dev-jwt-secret-min-32-characters-long
+      JWT_EXPIRES_IN: 24h
+      BCRYPT_ROUNDS: 12
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:5174
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../Transitops-backend/src:/app/src
+
+  frontend:
+    build:
+      context: ../Transitops_frontend
+      dockerfile: Dockerfile
+    container_name: transitops-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

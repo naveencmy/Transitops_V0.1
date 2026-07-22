@@ -4,6 +4,8 @@ import { PageHeader, Card, Badge, Button, Input, StatCard, Modal } from '../comp
 import { formatNumber } from '../services/format';
 import { vehicleService } from '../services/vehicleService';
 import { driverService } from '../services/driverService';
+import { authService } from '../services/authService';
+import { canAccess } from '../config/permissions';
 import type { Vehicle, Driver } from '../types';
 
 export default function Fleet() {
@@ -15,28 +17,37 @@ export default function Fleet() {
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Vehicle | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [v, d] = await Promise.all([
-          vehicleService.getVehicles(),
-          driverService.getDrivers(),
-        ]);
-        setVehicles(v);
-        setDrivers(d);
-      } catch (err) {
-        console.error('Failed to load vehicles:', err);
-      } finally {
-        setLoading(false);
-      }
+  const user = authService.getCurrentUser();
+  const canCreate = canAccess(user?.role, 'fleet') && user?.role !== 'FinancialAnalyst';
+
+  const [formPlate, setFormPlate] = useState('');
+  const [formName, setFormName] = useState('');
+  const [formType, setFormType] = useState('Truck');
+  const [formCapacity, setFormCapacity] = useState('');
+  const [formOdometer, setFormOdometer] = useState('0');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadVehicles = async () => {
+    try {
+      const [v, d] = await Promise.allSettled([
+        vehicleService.getVehicles(),
+        driverService.getDrivers(),
+      ]);
+      if (v.status === 'fulfilled') setVehicles(v.value);
+      if (d.status === 'fulfilled') setDrivers(d.value);
+    } catch (err) {
+      console.error('Failed to load vehicles:', err);
     }
-    loadData();
+  };
+
+  useEffect(() => {
+    loadVehicles().finally(() => setLoading(false));
   }, []);
 
   const driverName = (id: string | null) => drivers.find((d) => d.id === id)?.name ?? 'Unassigned';
 
   const filtered = vehicles.filter((v) => {
-    const matchesQuery = v.plate.toLowerCase().includes(query.toLowerCase()) || v.model.toLowerCase().includes(query.toLowerCase());
+    const matchesQuery = (v.plate || '').toLowerCase().includes(query.toLowerCase()) || (v.model || '').toLowerCase().includes(query.toLowerCase());
     const matchesFilter = filter === 'All' || v.status === filter;
     return matchesQuery && matchesFilter;
   });
@@ -45,6 +56,36 @@ export default function Fleet() {
   const maintenance = vehicles.filter((v) => v.status === 'Maintenance').length;
   const idle = vehicles.filter((v) => v.status === 'Idle').length;
   const avgFuel = vehicles.length > 0 ? Math.round(vehicles.reduce((s, v) => s + v.fuelLevel, 0) / vehicles.length) : 0;
+
+  const resetForm = () => {
+    setFormPlate('');
+    setFormName('');
+    setFormType('Truck');
+    setFormCapacity('');
+    setFormOdometer('0');
+  };
+
+  const handleCreate = async () => {
+    if (!formPlate || !formName || !formCapacity) return;
+    setSubmitting(true);
+    try {
+      await vehicleService.createVehicle({
+        registration_number: formPlate,
+        name: formName,
+        type: formType,
+        max_load_capacity_kg: Number(formCapacity),
+        odometer_km: Number(formOdometer),
+      } as any);
+      resetForm();
+      setAddOpen(false);
+      await loadVehicles();
+    } catch (err: any) {
+      console.error('Failed to create vehicle:', err);
+      alert(err.message || 'Failed to create vehicle');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -59,7 +100,7 @@ export default function Fleet() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fleet" subtitle={`${vehicles.length} vehicles registered`} actions={<Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add Vehicle</Button>} />
+      <PageHeader title="Fleet" subtitle={`${vehicles.length} vehicles registered`} actions={canCreate ? <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add Vehicle</Button> : undefined} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Active" value={String(active)} icon={<Truck className="h-5 w-5" />} accent="emerald" />
@@ -151,24 +192,27 @@ export default function Fleet() {
         )}
       </Modal>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Vehicle" size="lg"
-        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Add Vehicle</Button></>}>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Plate Number" placeholder="TX-7790" />
-            <Input label="Model" placeholder="Freightliner Cascadia" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
-                {['Truck', 'Van', 'Trailer', 'Bus', 'Refrigerated'].map((t) => <option key={t}>{t}</option>)}
-              </select>
+      {canCreate && (
+        <Modal open={addOpen} onClose={() => { setAddOpen(false); resetForm(); }} title="Add Vehicle" size="lg"
+          footer={<><Button variant="ghost" onClick={() => { setAddOpen(false); resetForm(); }}>Cancel</Button><Button onClick={handleCreate} disabled={submitting || !formPlate || !formName || !formCapacity}>{submitting ? 'Adding...' : 'Add Vehicle'}</Button></>}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Plate Number" placeholder="TX-7790" value={formPlate} onChange={(e) => setFormPlate(e.target.value)} />
+              <Input label="Vehicle Name" placeholder="Freightliner Cascadia" value={formName} onChange={(e) => setFormName(e.target.value)} />
             </div>
-            <Input label="Capacity (kg)" type="number" placeholder="12000" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
+                <select value={formType} onChange={(e) => setFormType(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                  {['Truck', 'Van', 'Trailer', 'Bus', 'Refrigerated'].map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <Input label="Capacity (kg)" type="number" placeholder="12000" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} />
+            </div>
+            <Input label="Odometer (km)" type="number" placeholder="0" value={formOdometer} onChange={(e) => setFormOdometer(e.target.value)} />
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 }

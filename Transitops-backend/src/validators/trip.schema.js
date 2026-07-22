@@ -26,16 +26,16 @@ const tripCreateSchema = Joi.object({
 });
 
 const tripCompleteSchema = Joi.object({
-  actual_distance_km: Joi.number().positive().required().messages({
-    'number.positive': 'Actual distance must be positive',
+  actual_distance_km: Joi.number().min(0).required().messages({
+    'number.min': 'Actual distance must be zero or positive',
     'any.required': 'Actual distance is required'
   }),
-  fuel_consumed_liters: Joi.number().positive().required().messages({
-    'number.positive': 'Fuel consumed must be positive',
+  fuel_consumed_liters: Joi.number().min(0).required().messages({
+    'number.min': 'Fuel consumed must be zero or positive',
     'any.required': 'Fuel consumed is required'
   }),
-  final_odometer_km: Joi.number().positive().required().messages({
-    'number.positive': 'Final odometer must be positive',
+  final_odometer_km: Joi.number().min(0).required().messages({
+    'number.min': 'Final odometer must be zero or positive',
     'any.required': 'Final odometer is required'
   })
 });

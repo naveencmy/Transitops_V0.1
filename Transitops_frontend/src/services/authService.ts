@@ -53,7 +53,14 @@ export const userService = {
   async getUsers(): Promise<AppUser[]> {
     const response = await authFetch('/api/v1/users');
     if (!response.ok) throw new Error('Failed to fetch users');
-    return response.json();
+    const json = await response.json();
+    const data = json.data ?? json;
+    return (Array.isArray(data) ? data : []).map((u: any) => ({
+      id: String(u.id),
+      email: u.email,
+      name: u.full_name,
+      role: u.role,
+    }));
   },
 
   async updateUserRole(id: string, role: Role): Promise<AppUser> {
@@ -62,7 +69,9 @@ export const userService = {
       body: JSON.stringify({ role }),
     });
     if (!response.ok) throw new Error('Failed to update user role');
-    return response.json();
+    const json = await response.json();
+    const u = json.data ?? json;
+    return { id: String(u.id), email: u.email, name: u.full_name, role: u.role };
   },
 
   async updateUserName(id: string, name: string): Promise<AppUser> {
@@ -71,7 +80,9 @@ export const userService = {
       body: JSON.stringify({ name }),
     });
     if (!response.ok) throw new Error('Failed to update user name');
-    return response.json();
+    const json = await response.json();
+    const u = json.data ?? json;
+    return { id: String(u.id), email: u.email, name: u.full_name, role: u.role };
   },
 
   async deleteUser(id: string): Promise<void> {
@@ -87,7 +98,9 @@ export const userService = {
       body: JSON.stringify({ name, email, role }),
     });
     if (!response.ok) throw new Error('Failed to add user');
-    return response.json();
+    const json = await response.json();
+    const u = json.data ?? json;
+    return { id: String(u.id), email: u.email, name: u.full_name, role: u.role };
   },
 };
 

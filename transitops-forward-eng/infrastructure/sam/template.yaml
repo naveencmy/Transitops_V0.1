@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TransitOps - Smart Transport Operations Platform (Serverless Backend)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs20.x
+    Tracing: Active
+    Environment:
+      Variables:
+        NODE_ENV: production
+        DATABASE_URL: !Ref DatabaseUrl
+        JWT_SECRET: !Ref JwtSecret
+        JWT_EXPIRES_IN: '24h'
+        BCRYPT_ROUNDS: '12'
+        ALLOWED_ORIGINS: !Sub 'https://${CloudFrontDomain}'
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    Description: Neon PostgreSQL connection string (use pooler endpoint)
+    NoEcho: true
+  JwtSecret:
+    Type: String
+    Description: JWT secret key (min 32 characters)
+    NoEcho: true
+  CloudFrontDomain:
+    Type: String
+    Description: CloudFront distribution domain name
+    Default: ''
+
+Resources:
+  # Lambda Function
+  TransitOpsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: transitops-backend
+      Handler: lambda-handler.handler
+      CodeUri: ../../backend/
+      Description: TransitOps Backend API
+      Layers:
+        - !Ref BackendDependencies
+      Policies:
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/transitops/*'
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /api/{proxy+}
+            Method: ANY
+            RestApiId: !Ref TransitOpsApi
+        Root:
+          Type: Api
+          Properties:
+            Path: /api
+            Method: ANY
+            RestApiId: !Ref TransitOpsApi
+
+  # Lambda Layer for node_modules
+  BackendDependencies:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: transitops-backend-deps
+      ContentUri: ../../backend/layer/
+      CompatibleRuntimes:
+        - nodejs20.x
+      Description: TransitOps backend dependencies
+    Metadata:
+      BuildMethod: makefile
+
+  # API Gateway
+  TransitOpsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: transitops-api
+      StageName: prod
+      Description: TransitOps REST API
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: !Sub "'https://${CloudFrontDomain}'"
+        AllowCredentials: true
+      Auth:
+        DefaultAuthorizer: NONE
+      TracingEnabled: true
+      MethodSettings:
+        - HttpMethod: '*'
+          ResourcePath: '/*'
+          LoggingLevel: INFO
+          MetricsEnabled: true
+          DataTraceEnabled: false
+
+  # CloudWatch Log Group
+  TransitOpsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/transitops-backend
+      RetentionInDays: 14
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${TransitOpsApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt TransitOpsFunction.Arn
+  FunctionName:
+    Description: Lambda Function Name
+    Value: !Ref TransitOpsFunction

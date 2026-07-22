@@ -1,0 +1,3 @@
+# TransitOps Backend - Production Dependencies for Lambda Layer
+# Run: npm ci --omit=dev
+# This creates a clean node_modules for the Lambda layer

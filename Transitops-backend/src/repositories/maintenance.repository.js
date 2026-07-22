@@ -59,7 +59,7 @@ class MaintenanceRepository {
 
   async update(id, updates, client = null) {
     const executor = client ? (t, p) => client.query(t, p) : query;
-    const ALLOWED_COLUMNS = ['maintenance_type', 'description', 'cost', 'scheduled_date'];
+    const ALLOWED_COLUMNS = ['maintenance_type', 'description', 'cost', 'scheduled_date', 'status'];
     const fields = [];
     const values = [];
     let idx = 1;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Bell, Shield, Building2, Save, Users as UsersIcon, Plus, Pencil, Trash2, X } from 'lucide-react';
 import { PageHeader, Card, Button, Input, Badge } from '../components/ui';
 import { authService, userService } from '../services/authService';
-import { ALL_ROLES } from '../config/permissions';
+import { ALL_ROLES, ROLE_DISPLAY_NAMES } from '../config/permissions';
 import type { AppUser, Role } from '../types';
 
 type Tab = 'profile' | 'company' | 'notifications' | 'security' | 'users';
@@ -45,6 +45,7 @@ export default function Settings() {
 }
 
 function ProfileTab({ name, email, role }: { name?: string; email?: string; role?: string }) {
+  const displayRole = role ? (ROLE_DISPLAY_NAMES[role as keyof typeof ROLE_DISPLAY_NAMES] ?? role) : 'Fleet Administrator';
   return (
     <Card title="Profile Information">
       <div className="space-y-5 p-5">
@@ -56,7 +57,7 @@ function ProfileTab({ name, email, role }: { name?: string; email?: string; role
           <Input label="Full Name" defaultValue={name ?? 'Alex Morgan'} />
           <Input label="Email" type="email" defaultValue={email ?? 'admin@fleetco.com'} />
           <Input label="Phone" defaultValue="+1 713-555-0100" />
-          <Input label="Role" defaultValue={role ?? 'Fleet Administrator'} disabled />
+          <Input label="Role" defaultValue={displayRole} disabled />
         </div>
         <div className="flex justify-end"><Button><Save className="h-4 w-4" /> Save Changes</Button></div>
       </div>
@@ -167,7 +168,7 @@ function UsersTab() {
               <tr key={u.id} className="hover:bg-slate-50/70">
                 <td className="px-5 py-3.5 font-medium text-slate-800">{u.name}</td>
                 <td className="px-5 py-3.5 text-slate-600">{u.email}</td>
-                <td className="px-5 py-3.5"><span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">{u.role}</span></td>
+                <td className="px-5 py-3.5"><span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">{ROLE_DISPLAY_NAMES[u.role as keyof typeof ROLE_DISPLAY_NAMES] ?? u.role}</span></td>
                 <td className="px-5 py-3.5"><div className="flex justify-end gap-1.5">
                   <button onClick={() => openEdit(u)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-sky-600"><Pencil className="h-4 w-4" /></button>
                   <button onClick={() => setDeleteId(u.id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>

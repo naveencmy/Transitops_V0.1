@@ -14,22 +14,29 @@ export default function Maintenance() {
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<MaintenanceRecord | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [m, v] = await Promise.all([
-          maintenanceService.getRecords(),
-          vehicleService.getVehicles(),
-        ]);
-        setRecords(m);
-        setVehicles(v);
-      } catch (err) {
-        console.error('Failed to load maintenance records:', err);
-      } finally {
-        setLoading(false);
-      }
+  const [formVehicleId, setFormVehicleId] = useState('');
+  const [formType, setFormType] = useState('Oil Change');
+  const [formDate, setFormDate] = useState('');
+  const [formMechanic, setFormMechanic] = useState('');
+  const [formCost, setFormCost] = useState('');
+  const [formNotes, setFormNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadRecords = async () => {
+    try {
+      const [m, v] = await Promise.allSettled([
+        maintenanceService.getRecords(),
+        vehicleService.getVehicles(),
+      ]);
+      if (m.status === 'fulfilled') setRecords(m.value);
+      if (v.status === 'fulfilled') setVehicles(v.value);
+    } catch (err) {
+      console.error('Failed to load maintenance records:', err);
     }
-    loadData();
+  };
+
+  useEffect(() => {
+    loadRecords().finally(() => setLoading(false));
   }, []);
 
   const filtered = filter === 'All' ? records : records.filter((r) => r.status === filter);
@@ -38,15 +45,54 @@ export default function Maintenance() {
   const scheduled = records.filter((r) => r.status === 'Scheduled').length;
   const inProgress = records.filter((r) => r.status === 'In Progress').length;
   const overdue = records.filter((r) => r.status === 'Overdue').length;
-  const totalCost = records.reduce((s, r) => s + r.cost, 0);
+  const totalCost = records.reduce((s, r) => s + (r.cost || 0), 0);
 
   const updateStatus = async (id: string, status: MaintenanceStatus) => {
     try {
-      await maintenanceService.updateRecord(id, { status });
+      const record = records.find((r) => r.id === id);
+      if (record?.status === 'Completed') return;
+      if (status === 'Completed') {
+        await maintenanceService.closeRecord(id);
+      } else {
+        await maintenanceService.updateRecord(id, { status });
+      }
       setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : r.completedDate } : r)));
       setSelected((prev) => (prev?.id === id ? { ...prev, status, completedDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : prev.completedDate } : prev));
     } catch (err) {
       console.error('Failed to update maintenance:', err);
+    }
+  };
+
+  const resetForm = () => {
+    setFormVehicleId('');
+    setFormType('Oil Change');
+    setFormDate('');
+    setFormMechanic('');
+    setFormCost('');
+    setFormNotes('');
+  };
+
+  const handleCreate = async () => {
+    if (!formVehicleId || !formType) return;
+    setSubmitting(true);
+    try {
+      await maintenanceService.createRecord({
+        vehicle_id: Number(formVehicleId),
+        maintenance_type: formType,
+        scheduled_date: formDate || null,
+        cost: formCost ? Number(formCost) : null,
+        description: formNotes,
+        mechanic: formMechanic,
+        notes: formNotes,
+      } as any);
+      resetForm();
+      setAddOpen(false);
+      await loadRecords();
+    } catch (err: any) {
+      console.error('Failed to create maintenance record:', err);
+      alert(err.message || 'Failed to create maintenance record');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -105,28 +151,32 @@ export default function Maintenance() {
         ))}
       </div>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Log Maintenance" size="lg"
-        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Save Record</Button></>}>
+      <Modal open={addOpen} onClose={() => { setAddOpen(false); resetForm(); }} title="Log Maintenance" size="lg"
+        footer={<><Button variant="ghost" onClick={() => { setAddOpen(false); resetForm(); }}>Cancel</Button><Button onClick={handleCreate} disabled={submitting || !formVehicleId || !formType}>{submitting ? 'Saving...' : 'Save Record'}</Button></>}>
         <div className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
-            <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+            <select value={formVehicleId} onChange={(e) => setFormVehicleId(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+              <option value="">Select a vehicle...</option>
               {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} — {v.model}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
-                {['Oil Change', 'Tire Rotation', 'Brake Service', 'Engine Repair', 'Inspection', 'General'].map((t) => <option key={t}>{t}</option>)}
+              <select value={formType} onChange={(e) => setFormType(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                {['Oil Change', 'Tire Rotation', 'Brake Service', 'Engine Repair', 'Inspection', 'General'].map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <Input label="Scheduled Date" type="date" />
+            <Input label="Scheduled Date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3"><Input label="Mechanic" placeholder="e.g. Erik Lund" /><Input label="Cost" type="number" placeholder="220" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Mechanic" placeholder="e.g. Erik Lund" value={formMechanic} onChange={(e) => setFormMechanic(e.target.value)} />
+            <Input label="Cost" type="number" placeholder="220" value={formCost} onChange={(e) => setFormCost(e.target.value)} />
+          </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Notes</label>
-            <textarea rows={3} placeholder="Describe the maintenance work..." className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40" />
+            <textarea rows={3} placeholder="Describe the maintenance work..." value={formNotes} onChange={(e) => setFormNotes(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40" />
           </div>
         </div>
       </Modal>

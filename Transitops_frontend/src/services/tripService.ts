@@ -47,6 +47,31 @@ export const tripService = {
     const json = await response.json();
     return mapTrip(json.data ?? json);
   },
+  async dispatchTrip(id: string): Promise<Trip> {
+    const response = await authFetch(`/api/v1/trips/${id}/dispatch`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to dispatch trip');
+    const json = await response.json();
+    return mapTrip(json.data ?? json);
+  },
+  async completeTrip(id: string, data: { actual_distance_km: number; fuel_consumed_liters: number; final_odometer_km: number }): Promise<Trip> {
+    const response = await authFetch(`/api/v1/trips/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to complete trip');
+    const json = await response.json();
+    return mapTrip(json.data ?? json);
+  },
+  async cancelTrip(id: string): Promise<Trip> {
+    const response = await authFetch(`/api/v1/trips/${id}/cancel`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to cancel trip');
+    const json = await response.json();
+    return mapTrip(json.data ?? json);
+  },
   async deleteTrip(id: string): Promise<void> {
     const response = await authFetch(`/api/v1/trips/${id}`, {
       method: 'DELETE',

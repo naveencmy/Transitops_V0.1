@@ -8,6 +8,8 @@ import { vehicleService } from '../services/vehicleService';
 import { driverService } from '../services/driverService';
 import { tripService } from '../services/tripService';
 import { maintenanceService } from '../services/maintenanceService';
+import { authService } from '../services/authService';
+import { canAccess } from '../config/permissions';
 import type { Vehicle, Driver, Trip, MaintenanceRecord } from '../types';
 
 const PIE_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -20,23 +22,35 @@ export default function Dashboard() {
   const [kpis, setKpis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const user = authService.getCurrentUser();
+  const role = user?.role;
+
   useEffect(() => {
     async function loadData() {
       try {
-        const [v, d, t, m] = await Promise.all([
-          vehicleService.getVehicles(),
-          driverService.getDrivers(),
-          tripService.getTrips(),
-          maintenanceService.getRecords(),
-        ]);
-        setVehicles(v);
-        setDrivers(d);
-        setTrips(t);
-        setMaintenance(m);
-        try {
-          const kpiRes = await dashboardService.getKPIs();
-          setKpis(kpiRes.data || kpiRes);
-        } catch { /* dashboard KPIs optional */ }
+        const promises: Promise<any>[] = [];
+        const keys: string[] = [];
+
+        if (canAccess(role, 'fleet')) { promises.push(vehicleService.getVehicles()); keys.push('v'); }
+        if (canAccess(role, 'drivers')) { promises.push(driverService.getDrivers()); keys.push('d'); }
+        if (canAccess(role, 'trips')) { promises.push(tripService.getTrips()); keys.push('t'); }
+        if (canAccess(role, 'maintenance')) { promises.push(maintenanceService.getRecords()); keys.push('m'); }
+
+        promises.push(dashboardService.getKPIs());
+        keys.push('kpi');
+
+        const results = await Promise.allSettled(promises);
+
+        keys.forEach((key, i) => {
+          const result = results[i];
+          if (result && result.status === 'fulfilled') {
+            if (key === 'v') setVehicles(result.value);
+            if (key === 'd') setDrivers(result.value);
+            if (key === 't') setTrips(result.value);
+            if (key === 'm') setMaintenance(result.value);
+            if (key === 'kpi') setKpis(result.value.data || result.value);
+          }
+        });
       } catch (err) {
         console.error('Dashboard load error:', err);
       } finally {
@@ -44,7 +58,7 @@ export default function Dashboard() {
       }
     }
     loadData();
-  }, []);
+  }, [role]);
 
   const activeVehicles = vehicles.filter((v) => v.status === 'Active').length;
   const onDutyDrivers = drivers.filter((d) => d.status === 'On Duty').length;
@@ -76,26 +90,28 @@ export default function Dashboard() {
       <PageHeader title="Dashboard" subtitle="Fleet operations overview" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Active Vehicles" value={String(activeVehicles)} icon={<Truck className="h-5 w-5" />} change={0} accent="sky" />
-        <StatCard title="On-Duty Drivers" value={String(onDutyDrivers)} icon={<Users className="h-5 w-5" />} change={0} accent="emerald" />
-        <StatCard title="Active Trips" value={String(activeTrips)} icon={<Route className="h-5 w-5" />} change={0} accent="amber" />
+        {canAccess(role, 'fleet') && <StatCard title="Active Vehicles" value={String(activeVehicles)} icon={<Truck className="h-5 w-5" />} change={0} accent="sky" />}
+        {canAccess(role, 'drivers') && <StatCard title="On-Duty Drivers" value={String(onDutyDrivers)} icon={<Users className="h-5 w-5" />} change={0} accent="emerald" />}
+        {canAccess(role, 'trips') && <StatCard title="Active Trips" value={String(activeTrips)} icon={<Route className="h-5 w-5" />} change={0} accent="amber" />}
         <StatCard title="Total Revenue" value={formatNumber(totalRevenue)} icon={<DollarSign className="h-5 w-5" />} change={0} accent="indigo" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card title="Vehicle Status" subtitle="Current fleet breakdown">
-          <div className="p-5">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={vehicleStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3}>
-                  {vehicleStatusData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
+        {canAccess(role, 'fleet') && (
+          <Card title="Vehicle Status" subtitle="Current fleet breakdown">
+            <div className="p-5">
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={vehicleStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                    {vehicleStatusData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        )}
 
         <Card title="Recent Alerts" subtitle="Items needing attention">
           <div className="divide-y divide-slate-100">

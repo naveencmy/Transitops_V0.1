@@ -9,8 +9,6 @@ const { logger } = require('./middleware/logger.middleware');
 const env = require('./config/env');
 
 const app = express();
-
-// Security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -26,7 +24,6 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// CORS — read from env, fallback to localhost dev
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173', 'http://localhost:5174'];
@@ -37,32 +34,24 @@ app.use(cors({
   credentials: true,
 }));
 
-// Global rate limit: 200 requests per 15 minutes per IP
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' } },
 }));
 
-// Body parsing with size limits
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
-// Request logging
 app.use(logger);
-
-// API routes
 app.use('/api/v1', routes);
 
-// 404 handler
 app.use(notFoundHandler);
 
-// Global error handler
 app.use(errorHandler);
 
-// Only start server if this file is run directly (not imported in tests)
 if (require.main === module) {
   const PORT = env.PORT;
 

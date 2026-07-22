@@ -1,4 +1,4 @@
-export type Role = 'Admin' | 'Fleet Manager' | 'Dispatcher' | 'Safety Officer' | 'Financial Analyst';
+export type Role = 'Admin' | 'FleetManager' | 'Dispatcher' | 'SafetyOfficer' | 'FinancialAnalyst';
 
 export type ModuleKey =
   | 'dashboard'
@@ -53,6 +53,7 @@ export type TripStatus = 'Scheduled' | 'Dispatched' | 'In Progress' | 'Completed
 
 export interface Trip {
   id: string;
+  tripCode: string;
   origin: string;
   destination: string;
   distanceKm: number;

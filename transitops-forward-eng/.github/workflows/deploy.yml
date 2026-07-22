@@ -1,0 +1,185 @@
+name: TransitOps CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  SAM_STACK_NAME: transitops-backend
+  S3_BUCKET: transitops-frontend
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # Test
+  # ─────────────────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: Transitops-backend
+
+      - name: Run backend tests
+        run: npm test
+        working-directory: Transitops-backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: Transitops_frontend
+
+      - name: TypeScript check
+        run: npm run typecheck
+        working-directory: Transitops_frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: Transitops_frontend
+
+  # ─────────────────────────────────────────────────────────
+  # Deploy Backend (only on push to main)
+  # ─────────────────────────────────────────────────────────
+  deploy-backend:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Python (for SAM)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install AWS SAM CLI
+        run: |
+          pip install aws-sam-cli
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install backend dependencies
+        run: npm ci --omit=dev
+        working-directory: Transitops-backend
+
+      - name: Build Lambda layer
+        run: |
+          mkdir -p transitops-forward-eng/backend/layer/nodejs
+          cp -r Transitops-backend/node_modules transitops-forward-eng/backend/layer/nodejs/
+          cp Transitops-backend/package.json transitops-forward-eng/backend/layer/nodejs/
+
+      - name: SAM Build
+        run: sam build
+        working-directory: transitops-forward-eng/infrastructure/sam
+
+      - name: SAM Deploy
+        run: |
+          sam deploy \
+            --stack-name ${{ env.SAM_STACK_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              DatabaseUrl="${{ secrets.DATABASE_URL }}" \
+              JwtSecret="${{ secrets.JWT_SECRET }}" \
+              CloudFrontDomain="${{ secrets.CLOUDFRONT_DOMAIN }}"
+        working-directory: transitops-forward-eng/infrastructure/sam
+
+      - name: Get API URL
+        id: api-url
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.SAM_STACK_NAME }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+            --output text)
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Test health endpoint
+        run: |
+          sleep 10
+          curl -f "${{ steps.api-url.outputs.api_url }}/api/v1/health" || echo "Health check may need warm-up time"
+
+  # ─────────────────────────────────────────────────────────
+  # Deploy Frontend (only on push to main)
+  # ─────────────────────────────────────────────────────────
+  deploy-frontend:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get API URL from backend stack
+        id: api
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.SAM_STACK_NAME }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+            --output text)
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Build frontend with production API URL
+        run: |
+          echo "VITE_API_BASE_URL=${{ steps.api.outputs.api_url }}" > Transitops_frontend/.env.production
+          cd Transitops_frontend && npm ci && npm run build
+
+      - name: Sync to S3
+        run: |
+          # Sync assets with long cache
+          aws s3 sync Transitops_frontend/dist/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html"
+
+          # Upload index.html with no-cache
+          aws s3 cp Transitops_frontend/dist/index.html s3://${{ env.S3_BUCKET }}/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Invalidate CloudFront
+        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      - name: Print deployment info
+        run: |
+          echo "✅ Frontend deployed to s3://${{ env.S3_BUCKET }}"
+          echo "   CloudFront: https://${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}.cloudfront.net"

@@ -1,5 +1,5 @@
 import type { MaintenanceRecord } from '../types';
-import { authFetch, mapMaintenance } from './api';
+import { authFetch, mapMaintenance, toBackendMaintenanceStatus } from './api';
 
 export const maintenanceService = {
   async getRecords(): Promise<MaintenanceRecord[]> {
@@ -26,11 +26,23 @@ export const maintenanceService = {
     return mapMaintenance(json.data ?? json);
   },
   async updateRecord(id: string, recordData: Partial<MaintenanceRecord>): Promise<MaintenanceRecord> {
+    const payload: Record<string, any> = { ...recordData };
+    if (payload.status) {
+      payload.status = toBackendMaintenanceStatus(payload.status);
+    }
     const response = await authFetch(`/api/v1/maintenance/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(recordData),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error('Failed to update maintenance record');
+    const json = await response.json();
+    return mapMaintenance(json.data ?? json);
+  },
+  async closeRecord(id: string): Promise<MaintenanceRecord> {
+    const response = await authFetch(`/api/v1/maintenance/${id}/close`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to close maintenance record');
     const json = await response.json();
     return mapMaintenance(json.data ?? json);
   },

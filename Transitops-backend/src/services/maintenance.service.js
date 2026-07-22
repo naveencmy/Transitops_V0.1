@@ -88,6 +88,15 @@ class MaintenanceService {
       throw new BadRequestError('Cannot update completed maintenance record');
     }
 
+    // If status is changing to Completed, restore vehicle to Available
+    if (updates.status === MAINTENANCE_STATUS.COMPLETED && record.status !== MAINTENANCE_STATUS.COMPLETED) {
+      return await withTransaction(async (client) => {
+        const updated = await maintenanceRepository.update(id, updates, client);
+        await vehicleRepository.updateStatus(record.vehicle_id, VEHICLE_STATUS.AVAILABLE, client);
+        return updated;
+      });
+    }
+
     return await maintenanceRepository.update(id, updates);
   }
 

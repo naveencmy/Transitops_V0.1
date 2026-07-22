@@ -1,0 +1,26 @@
+{
+  "routes": [
+    {
+      "path": "/api/{proxy+}",
+      "method": "ANY",
+      "integration": {
+        "type": "aws_proxy",
+        "uri": "arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${functionArn}/invocations"
+      }
+    },
+    {
+      "path": "/api",
+      "method": "ANY",
+      "integration": {
+        "type": "aws_proxy",
+        "uri": "arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${functionArn}/invocations"
+      }
+    }
+  ],
+  "cors": {
+    "allowOrigins": ["https://${cloudfrontDomain}"],
+    "allowMethods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    "allowHeaders": ["Content-Type", "Authorization"],
+    "allowCredentials": true
+  }
+}

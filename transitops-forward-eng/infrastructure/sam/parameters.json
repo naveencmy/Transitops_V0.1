@@ -1,0 +1,17 @@
+[
+  {
+    "ParameterKey": "DatabaseUrl",
+    "ParameterValue": "REPLACE_WITH_NEON_POOLER_URL",
+    "ResolvedValue": "REPLACE_WITH_NEON_POOLER_URL"
+  },
+  {
+    "ParameterKey": "JwtSecret",
+    "ParameterValue": "REPLACE_WITH_MIN_32_CHAR_SECRET",
+    "ResolvedValue": "REPLACE_WITH_MIN_32_CHAR_SECRET"
+  },
+  {
+    "ParameterKey": "CloudFrontDomain",
+    "ParameterValue": "",
+    "ResolvedValue": ""
+  }
+]

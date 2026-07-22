@@ -124,20 +124,48 @@ class ReportRepository {
 
   // Revenue vs Expenses trend
   async getRevenueExpenseTrend() {
-    const result = await query(`
+    const revenueResult = await query(`
       SELECT 
-        DATE_TRUNC('month', t.completed_at) as month,
-        COALESCE(SUM(t.revenue), 0) as revenue,
-        COALESCE(SUM(e.amount), 0) as expenses
-      FROM trips t
-      LEFT JOIN expenses e ON DATE_TRUNC('month', t.completed_at) = DATE_TRUNC('month', e.created_at)
-      WHERE t.completed_at >= CURRENT_DATE - INTERVAL '12 months'
-      AND t.status = 'Completed'
-      GROUP BY DATE_TRUNC('month', t.completed_at)
-      ORDER BY month DESC
+        TO_CHAR(DATE_TRUNC('month', completed_at), 'Mon YYYY') as month,
+        DATE_TRUNC('month', completed_at) as month_date,
+        COALESCE(SUM(revenue), 0) as revenue
+      FROM trips
+      WHERE completed_at >= CURRENT_DATE - INTERVAL '12 months'
+      AND status = 'Completed'
+      GROUP BY DATE_TRUNC('month', completed_at)
+      ORDER BY month_date DESC
       LIMIT 12
     `);
-    return result.rows;
+
+    const expenseResult = await query(`
+      SELECT 
+        TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YYYY') as month,
+        DATE_TRUNC('month', created_at) as month_date,
+        COALESCE(SUM(amount), 0) as expenses
+      FROM expenses
+      WHERE created_at >= CURRENT_DATE - INTERVAL '12 months'
+      GROUP BY DATE_TRUNC('month', created_at)
+      ORDER BY month_date DESC
+      LIMIT 12
+    `);
+
+    const revenueMap = {};
+    for (const row of revenueResult.rows) {
+      revenueMap[row.month] = { month: row.month, revenue: Number(row.revenue), expenses: 0 };
+    }
+    for (const row of expenseResult.rows) {
+      if (revenueMap[row.month]) {
+        revenueMap[row.month].expenses = Number(row.expenses);
+      } else {
+        revenueMap[row.month] = { month: row.month, revenue: 0, expenses: Number(row.expenses) };
+      }
+    }
+
+    return Object.values(revenueMap).sort((a, b) => {
+      const dateA = new Date(a.month);
+      const dateB = new Date(b.month);
+      return dateA.getTime() - dateB.getTime();
+    });
   }
 }
 

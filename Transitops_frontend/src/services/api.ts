@@ -70,6 +70,16 @@ const MAINTENANCE_STATUS_MAP: Record<string, string> = {
   Overdue: 'Overdue',
 };
 
+export function toBackendMaintenanceStatus(status: string): string {
+  const REVERSE: Record<string, string> = {
+    'In Progress': 'InProgress',
+    'Scheduled': 'Scheduled',
+    'Completed': 'Completed',
+    'Overdue': 'Overdue',
+  };
+  return REVERSE[status] || status;
+}
+
 export function mapVehicle(v: any) {
   return {
     id: String(v.id),
@@ -102,7 +112,8 @@ export function mapDriver(d: any) {
 
 export function mapTrip(t: any) {
   return {
-    id: t.trip_code || String(t.id),
+    id: String(t.id),
+    tripCode: t.trip_code || `TRP-${t.id}`,
     origin: t.source || t.origin || '',
     destination: t.destination || '',
     distanceKm: Number(t.planned_distance_km || t.actual_distance_km) || 0,

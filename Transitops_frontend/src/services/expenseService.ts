@@ -10,7 +10,7 @@ export const expenseService = {
     return Array.isArray(data) ? data.map(mapExpense) : [];
   },
   async getFuelRecords(): Promise<FuelRecord[]> {
-    const response = await authFetch('/api/v1/fuel');
+    const response = await authFetch('/api/v1/fuel/logs');
     if (!response.ok) throw new Error('Failed to fetch fuel records');
     const json = await response.json();
     const data = json.data ?? json;
@@ -24,7 +24,7 @@ export const expenseService = {
     return Array.isArray(data) ? data.map(mapExpense) : [];
   },
   async getFuelByVehicle(vehicleId: string): Promise<FuelRecord[]> {
-    const response = await authFetch(`/api/v1/fuel?vehicleId=${encodeURIComponent(vehicleId)}`);
+    const response = await authFetch(`/api/v1/fuel/logs?vehicleId=${encodeURIComponent(vehicleId)}`);
     if (!response.ok) throw new Error('Failed to fetch fuel records');
     const json = await response.json();
     const data = json.data ?? json;

@@ -15,28 +15,34 @@ export default function Drivers() {
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Driver | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [d, v] = await Promise.all([
-          driverService.getDrivers(),
-          vehicleService.getVehicles(),
-        ]);
-        setDrivers(d);
-        setVehicles(v);
-      } catch (err) {
-        console.error('Failed to load drivers:', err);
-      } finally {
-        setLoading(false);
-      }
+  const [formName, setFormName] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formLicense, setFormLicense] = useState('');
+  const [formExpiry, setFormExpiry] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadDrivers = async () => {
+    try {
+      const [d, v] = await Promise.allSettled([
+        driverService.getDrivers(),
+        vehicleService.getVehicles(),
+      ]);
+      if (d.status === 'fulfilled') setDrivers(d.value);
+      if (v.status === 'fulfilled') setVehicles(v.value);
+    } catch (err) {
+      console.error('Failed to load drivers:', err);
     }
-    loadData();
+  };
+
+  useEffect(() => {
+    loadDrivers().finally(() => setLoading(false));
   }, []);
 
   const vehiclePlate = (id: string | null) => vehicles.find((v) => v.id === id)?.plate ?? 'None';
 
   const filtered = drivers.filter((d) => {
-    const matchesQuery = d.name.toLowerCase().includes(query.toLowerCase()) || d.email.toLowerCase().includes(query.toLowerCase());
+    const matchesQuery = (d.name || '').toLowerCase().includes(query.toLowerCase()) || (d.email || '').toLowerCase().includes(query.toLowerCase());
     const matchesFilter = filter === 'All' || d.status === filter;
     return matchesQuery && matchesFilter;
   });
@@ -45,6 +51,36 @@ export default function Drivers() {
   const offDuty = drivers.filter((d) => d.status === 'Off Duty').length;
   const onLeave = drivers.filter((d) => d.status === 'On Leave').length;
   const avgRating = drivers.length > 0 ? (drivers.reduce((s, d) => s + d.rating, 0) / drivers.length).toFixed(1) : '0.0';
+
+  const resetForm = () => {
+    setFormName('');
+    setFormPhone('');
+    setFormEmail('');
+    setFormLicense('');
+    setFormExpiry('');
+  };
+
+  const handleCreate = async () => {
+    if (!formName || !formLicense || !formExpiry) return;
+    setSubmitting(true);
+    try {
+      await driverService.createDriver({
+        full_name: formName,
+        contact_number: formPhone,
+        email: formEmail,
+        license_number: formLicense,
+        license_expiry: formExpiry,
+      } as any);
+      resetForm();
+      setAddOpen(false);
+      await loadDrivers();
+    } catch (err: any) {
+      console.error('Failed to create driver:', err);
+      alert(err.message || 'Failed to create driver');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -83,7 +119,7 @@ export default function Drivers() {
           <button key={d.id} onClick={() => setSelected(d)} className="group rounded-xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/60">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-lg font-semibold text-sky-700">{d.name.charAt(0)}</div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-lg font-semibold text-sky-700">{(d.name || '?').charAt(0)}</div>
                 <div>
                   <p className="font-semibold text-slate-900">{d.name}</p>
                   <p className="text-xs text-slate-500">{d.licenseNumber}</p>
@@ -112,7 +148,7 @@ export default function Drivers() {
         {selected && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-xl font-semibold text-sky-700">{selected.name.charAt(0)}</div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-xl font-semibold text-sky-700">{(selected.name || '?').charAt(0)}</div>
               <div>
                 <p className="text-lg font-semibold text-slate-900">{selected.name}</p>
                 <p className="text-sm text-slate-500">{selected.email}</p>
@@ -142,17 +178,17 @@ export default function Drivers() {
         )}
       </Modal>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Driver" size="lg"
-        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Add Driver</Button></>}>
+      <Modal open={addOpen} onClose={() => { setAddOpen(false); resetForm(); }} title="Add Driver" size="lg"
+        footer={<><Button variant="ghost" onClick={() => { setAddOpen(false); resetForm(); }}>Cancel</Button><Button onClick={handleCreate} disabled={submitting || !formName || !formLicense || !formExpiry}>{submitting ? 'Adding...' : 'Add Driver'}</Button></>}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Full Name" placeholder="John Doe" />
-            <Input label="Phone" placeholder="+1 713-555-0100" />
+            <Input label="Full Name" placeholder="John Doe" value={formName} onChange={(e) => setFormName(e.target.value)} />
+            <Input label="Phone" placeholder="+1 713-555-0100" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} />
           </div>
-          <Input label="Email" type="email" placeholder="john@fleetco.com" />
+          <Input label="Email" type="email" placeholder="john@fleetco.com" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="License Number" placeholder="CDL-A-99299" />
-            <Input label="License Expiry" type="date" />
+            <Input label="License Number" placeholder="CDL-A-99299" value={formLicense} onChange={(e) => setFormLicense(e.target.value)} />
+            <Input label="License Expiry" type="date" value={formExpiry} onChange={(e) => setFormExpiry(e.target.value)} />
           </div>
         </div>
       </Modal>

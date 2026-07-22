@@ -1,32 +1,35 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { PageHeader, Card, StatCard } from '../components/ui';
 import { formatNumber } from '../services/format';
 import { reportService } from '../services/reportService';
 import { tripService } from '../services/tripService';
+import { expenseService } from '../services/expenseService';
 import { TrendingUp, TrendingDown, DollarSign, Route } from 'lucide-react';
 import type { Trip } from '../types';
+
+const PIE_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1'];
 
 export default function Analytics() {
   const [revenueTrend, setRevenueTrend] = useState<any[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [operationalCost, setOperationalCost] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [tripStatusDist, setTripStatusDist] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [revRes, tripRes, costRes, statusRes] = await Promise.all([
-          reportService.getRevenueExpenseTrend().catch(() => ({ data: [] })),
+        const [revRes, tripRes, expRes, statusRes] = await Promise.allSettled([
+          reportService.getRevenueExpenseTrend(),
           tripService.getTrips(),
-          reportService.getOperationalCost().catch(() => ({ data: [] })),
-          reportService.getTripStatusDistribution().catch(() => ({ data: [] })),
+          expenseService.getExpenses(),
+          reportService.getTripStatusDistribution(),
         ]);
-        setRevenueTrend(revRes.data || []);
-        setTrips(tripRes);
-        setOperationalCost(costRes.data || []);
-        setTripStatusDist(statusRes.data || []);
+        if (revRes.status === 'fulfilled') setRevenueTrend(Array.isArray(revRes.value) ? revRes.value : []);
+        if (tripRes.status === 'fulfilled') setTrips(tripRes.value);
+        if (expRes.status === 'fulfilled') setExpenses(expRes.value);
+        if (statusRes.status === 'fulfilled') setTripStatusDist(Array.isArray(statusRes.value) ? statusRes.value : []);
       } catch (err) {
         console.error('Failed to load analytics:', err);
       } finally {
@@ -41,17 +44,16 @@ export default function Analytics() {
   const totalProfit = totalRevenue - totalExpenses;
   const completedTrips = trips.filter((t) => t.status === 'Completed').length;
 
-  const expenseByCategory = operationalCost.reduce((acc: Record<string, number>, v: any) => {
-    acc['Fuel'] = (acc['Fuel'] || 0) + (Number(v.fuel_cost) || 0);
-    acc['Maintenance'] = (acc['Maintenance'] || 0) + (Number(v.maintenance_cost) || 0);
+  const expenseByCategory = expenses.reduce((acc: Record<string, number>, e: any) => {
+    const cat = e.category || 'Other';
+    acc[cat] = (acc[cat] || 0) + (Number(e.amount) || 0);
     return acc;
   }, {} as Record<string, number>);
 
   const expenseChartData = Object.entries(expenseByCategory)
     .map(([name, value]) => ({ name, value }))
-    .filter((d) => d.value > 0);
-
-  const PIE_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1'];
+    .filter((d) => d.value > 0)
+    .sort((a, b) => b.value - a.value);
 
   const tripsByStatus = tripStatusDist.map((t: any) => ({
     name: t.status,
@@ -100,9 +102,19 @@ export default function Analytics() {
         <Card title="Expense Breakdown" subtitle="By category">
           <div className="p-5">
             {expenseChartData.length > 0 ? (
-              <div className="flex items-center justify-center py-10 text-sm text-slate-400">
-                Expense breakdown data available
-              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={expenseChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(v) => formatNumber(Number(v))} />
+                  <Bar dataKey="value" name="Amount" radius={[4, 4, 0, 0]}>
+                    {expenseChartData.map((_, idx) => (
+                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center py-10 text-sm text-slate-400">
                 No expense data available
@@ -131,38 +143,6 @@ export default function Analytics() {
           </div>
         </Card>
 
-        <Card title="Operational Cost" subtitle="Cost breakdown by vehicle">
-          <div className="p-5">
-            {operationalCost.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100">
-                      <th className="pb-2 font-semibold text-slate-600">Vehicle</th>
-                      <th className="pb-2 font-semibold text-slate-600 text-right">Fuel Cost</th>
-                      <th className="pb-2 font-semibold text-slate-600 text-right">Maint. Cost</th>
-                      <th className="pb-2 font-semibold text-slate-600 text-right">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {operationalCost.slice(0, 5).map((v: any) => (
-                      <tr key={v.id}>
-                        <td className="py-2 text-slate-700">{v.registration_number || v.vehicle_name}</td>
-                        <td className="py-2 text-right text-slate-600">{formatNumber(Number(v.fuel_cost) || 0)}</td>
-                        <td className="py-2 text-right text-slate-600">{formatNumber(Number(v.maintenance_cost) || 0)}</td>
-                        <td className="py-2 text-right font-medium text-slate-800">{formatNumber(Number(v.total_revenue) || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-10 text-sm text-slate-400">
-                No operational cost data available
-              </div>
-            )}
-          </div>
-        </Card>
       </div>
     </div>
   );

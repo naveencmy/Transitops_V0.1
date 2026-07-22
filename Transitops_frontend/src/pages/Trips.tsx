@@ -17,28 +17,23 @@ export default function Trips() {
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Trip | null>(null);
 
+  const loadTrips = async () => {
+    const [t, v, d] = await Promise.allSettled([
+      tripService.getTrips(),
+      vehicleService.getVehicles(),
+      driverService.getDrivers(),
+    ]);
+    if (t.status === 'fulfilled') setTrips(t.value);
+    if (v.status === 'fulfilled') setVehicles(v.value);
+    if (d.status === 'fulfilled') setDrivers(d.value);
+  };
+
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [t, v, d] = await Promise.all([
-          tripService.getTrips(),
-          vehicleService.getVehicles(),
-          driverService.getDrivers(),
-        ]);
-        setTrips(t);
-        setVehicles(v);
-        setDrivers(d);
-      } catch (err) {
-        console.error('Failed to load trips:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+    loadTrips().finally(() => setLoading(false));
   }, []);
 
   const filtered = trips.filter((t) => {
-    const matchesQuery = t.origin.toLowerCase().includes(query.toLowerCase()) || t.destination.toLowerCase().includes(query.toLowerCase()) || t.id.toLowerCase().includes(query.toLowerCase());
+    const matchesQuery = (t.origin || '').toLowerCase().includes(query.toLowerCase()) || (t.destination || '').toLowerCase().includes(query.toLowerCase()) || (t.id || '').toLowerCase().includes(query.toLowerCase());
     const matchesFilter = filter === 'All' || t.status === filter;
     return matchesQuery && matchesFilter;
   });
@@ -46,11 +41,26 @@ export default function Trips() {
   const driverName = (id: string) => drivers.find((d) => d.id === id)?.name ?? '—';
   const vehiclePlate = (id: string) => vehicles.find((v) => v.id === id)?.plate ?? '—';
 
-  const updateTripStatus = async (id: string, status: TripStatus) => {
+  const updateTripStatus = async (id: string, action: 'dispatch' | 'complete' | 'cancel') => {
     try {
-      await tripService.updateTrip(id, { status });
-      setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
-      setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+      if (action === 'dispatch') {
+        await tripService.dispatchTrip(id);
+        setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'Dispatched' as TripStatus } : t)));
+        setSelected((prev) => (prev?.id === id ? { ...prev, status: 'Dispatched' as TripStatus } : prev));
+      } else if (action === 'complete') {
+        const trip = trips.find((t) => t.id === id);
+        await tripService.completeTrip(id, {
+          actual_distance_km: trip?.distanceKm || 0,
+          fuel_consumed_liters: 50,
+          final_odometer_km: 0,
+        });
+        setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'Completed' as TripStatus } : t)));
+        setSelected((prev) => (prev?.id === id ? { ...prev, status: 'Completed' as TripStatus } : prev));
+      } else if (action === 'cancel') {
+        await tripService.cancelTrip(id);
+        setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'Cancelled' as TripStatus } : t)));
+        setSelected((prev) => (prev?.id === id ? { ...prev, status: 'Cancelled' as TripStatus } : prev));
+      }
     } catch (err) {
       console.error('Failed to update trip:', err);
     }
@@ -102,7 +112,7 @@ export default function Trips() {
             <tbody className="divide-y divide-slate-100">
               {filtered.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50/70">
-                  <td className="px-5 py-3.5 font-medium text-slate-800">{t.id}</td>
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{t.tripCode}</td>
                   <td className="px-5 py-3.5 text-slate-600">
                     <div className="flex items-center gap-1.5"><span>{t.origin}</span><span className="text-slate-300">→</span><span>{t.destination}</span></div>
                     <span className="text-xs text-slate-400">{t.distanceKm} km · {t.weightTons}t</span>
@@ -115,10 +125,10 @@ export default function Trips() {
                   <td className="px-5 py-3.5">
                     <div className="flex justify-end gap-1.5">
                       {canDispatch(t) && (
-                        <button onClick={() => updateTripStatus(t.id, 'Dispatched')} className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"><Send className="h-3.5 w-3.5" /> Dispatch</button>
+                        <button onClick={() => updateTripStatus(t.id, 'dispatch')} className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"><Send className="h-3.5 w-3.5" /> Dispatch</button>
                       )}
                       {canCancel(t) && (
-                        <button onClick={() => updateTripStatus(t.id, 'Cancelled')} className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"><Ban className="h-3.5 w-3.5" /> Cancel</button>
+                        <button onClick={() => updateTripStatus(t.id, 'cancel')} className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"><Ban className="h-3.5 w-3.5" /> Cancel</button>
                       )}
                       <button onClick={() => setSelected(t)} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100">View</button>
                     </div>
@@ -130,13 +140,13 @@ export default function Trips() {
         </div>
       </Card>
 
-      <ScheduleTripModal open={addOpen} onClose={() => setAddOpen(false)} vehicles={vehicles} drivers={drivers} />
+      <ScheduleTripModal open={addOpen} onClose={() => setAddOpen(false)} vehicles={vehicles} drivers={drivers} onCreated={loadTrips} />
 
       <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title="Trip Details" size="lg">
         {selected && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div><p className="text-lg font-semibold text-slate-900">{selected.id}</p><p className="text-sm text-slate-500">{selected.origin} → {selected.destination}</p></div>
+              <div><p className="text-lg font-semibold text-slate-900">{selected.tripCode}</p><p className="text-sm text-slate-500">{selected.origin} → {selected.destination}</p></div>
               <Badge status={selected.status} />
             </div>
             {selected.status === 'In Progress' && (
@@ -158,9 +168,9 @@ export default function Trips() {
               ))}
             </div>
             <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-              <Button size="sm" onClick={() => updateTripStatus(selected.id, 'Completed')}>Mark Completed</Button>
-              {canDispatch(selected) && <Button size="sm" variant="secondary" onClick={() => updateTripStatus(selected.id, 'Dispatched')}><Send className="h-3.5 w-3.5" /> Dispatch</Button>}
-              {canCancel(selected) && <Button size="sm" variant="danger" onClick={() => updateTripStatus(selected.id, 'Cancelled')}><Ban className="h-3.5 w-3.5" /> Cancel</Button>}
+              <Button size="sm" onClick={() => updateTripStatus(selected.id, 'complete')}>Mark Completed</Button>
+              {canDispatch(selected) && <Button size="sm" variant="secondary" onClick={() => updateTripStatus(selected.id, 'dispatch')}><Send className="h-3.5 w-3.5" /> Dispatch</Button>}
+              {canCancel(selected) && <Button size="sm" variant="danger" onClick={() => updateTripStatus(selected.id, 'cancel')}><Ban className="h-3.5 w-3.5" /> Cancel</Button>}
             </div>
           </div>
         )}
@@ -169,19 +179,38 @@ export default function Trips() {
   );
 }
 
-function ScheduleTripModal({ open, onClose, vehicles, drivers }: { open: boolean; onClose: () => void; vehicles: Vehicle[]; drivers: Driver[] }) {
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-  const [weightTons, setWeightTons] = useState<string>('');
+function ScheduleTripModal({ open, onClose, vehicles, drivers, onCreated }: { open: boolean; onClose: () => void; vehicles: Vehicle[]; drivers: Driver[]; onCreated: () => void }) {
+  const [formOrigin, setFormOrigin] = useState('');
+  const [formDestination, setFormDestination] = useState('');
+  const [formDriverId, setFormDriverId] = useState('');
+  const [formVehicleId, setFormVehicleId] = useState('');
+  const [formWeight, setFormWeight] = useState('');
+  const [formCargo, setFormCargo] = useState('');
+  const [formRevenue, setFormRevenue] = useState('');
+  const [formDistance, setFormDistance] = useState('');
   const [weightError, setWeightError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+  const selectedVehicle = vehicles.find((v) => v.id === formVehicleId);
   const vehicleCapacityTons = selectedVehicle ? selectedVehicle.capacityKg / 1000 : 0;
-  const weightNum = parseFloat(weightTons);
+  const weightNum = parseFloat(formWeight);
   const isWeightValid = !isNaN(weightNum) && weightNum > 0 && weightNum <= vehicleCapacityTons;
-  const canSchedule = selectedVehicleId !== '' && isWeightValid;
+  const canSchedule = formOrigin && formDestination && formDriverId && formVehicleId && isWeightValid;
+
+  const resetForm = () => {
+    setFormOrigin('');
+    setFormDestination('');
+    setFormDriverId('');
+    setFormVehicleId('');
+    setFormWeight('');
+    setFormCargo('');
+    setFormRevenue('');
+    setFormDistance('');
+    setWeightError('');
+  };
 
   const handleWeightChange = (value: string) => {
-    setWeightTons(value);
+    setFormWeight(value);
     const num = parseFloat(value);
     if (value && !isNaN(num) && selectedVehicle && num > vehicleCapacityTons) {
       setWeightError('Goods weight exceeds the selected vehicle capacity.');
@@ -190,22 +219,50 @@ function ScheduleTripModal({ open, onClose, vehicles, drivers }: { open: boolean
     }
   };
 
+  const handleCreate = async () => {
+    if (!canSchedule) return;
+    setSubmitting(true);
+    try {
+      await tripService.createTrip({
+        source: formOrigin,
+        destination: formDestination,
+        driver_id: Number(formDriverId),
+        vehicle_id: Number(formVehicleId),
+        cargo_weight_kg: Number(formWeight) * 1000,
+        cargo_description: formCargo,
+        revenue: formRevenue ? Number(formRevenue) : undefined,
+        planned_distance_km: formDistance ? Number(formDistance) : undefined,
+      } as any);
+      resetForm();
+      onClose();
+      await onCreated();
+    } catch (err: any) {
+      console.error('Failed to create trip:', err);
+      alert(err.message || 'Failed to create trip');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title="Schedule New Trip" size="lg"
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={onClose} disabled={!canSchedule}>Schedule</Button></>}>
+    <Modal open={open} onClose={() => { onClose(); resetForm(); }} title="Schedule New Trip" size="lg"
+      footer={<><Button variant="ghost" onClick={() => { onClose(); resetForm(); }}>Cancel</Button><Button onClick={handleCreate} disabled={submitting || !canSchedule}>{submitting ? 'Scheduling...' : 'Schedule'}</Button></>}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3"><Input label="Origin" placeholder="Houston, TX" /><Input label="Destination" placeholder="New Orleans, LA" /></div>
-        <div className="grid grid-cols-2 gap-3"><Input label="Departure" type="datetime-local" /><Input label="Arrival" type="datetime-local" /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Origin" placeholder="Houston, TX" value={formOrigin} onChange={(e) => setFormOrigin(e.target.value)} />
+          <Input label="Destination" placeholder="New Orleans, LA" value={formDestination} onChange={(e) => setFormDestination(e.target.value)} />
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Driver</label>
-            <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+            <select value={formDriverId} onChange={(e) => setFormDriverId(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+              <option value="">Select a driver...</option>
               {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
-            <select value={selectedVehicleId} onChange={(e) => { setSelectedVehicleId(e.target.value); setWeightError(''); }} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+            <select value={formVehicleId} onChange={(e) => { setFormVehicleId(e.target.value); setWeightError(''); setFormWeight(''); }} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
               <option value="">Select a vehicle...</option>
               {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} — {v.model} ({(v.capacityKg / 1000).toFixed(1)}t cap)</option>)}
             </select>
@@ -213,12 +270,15 @@ function ScheduleTripModal({ open, onClose, vehicles, drivers }: { open: boolean
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700">Goods Weight (tons){selectedVehicle && <span className="ml-2 text-xs text-slate-400">Max capacity: {vehicleCapacityTons.toFixed(1)} tons</span>}</label>
-          <Input type="number" placeholder="e.g. 10" value={weightTons} onChange={(e) => handleWeightChange(e.target.value)} />
+          <Input type="number" placeholder="e.g. 10" value={formWeight} onChange={(e) => handleWeightChange(e.target.value)} />
           {weightError && <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700"><AlertTriangle className="h-3.5 w-3.5" />{weightError}</div>}
           {selectedVehicle && isWeightValid && <div className="mt-2 text-xs text-emerald-600">Weight is within vehicle capacity.</div>}
         </div>
-        <Input label="Cargo Description" placeholder="Industrial Machinery" />
-        <Input label="Revenue" type="number" placeholder="4200" />
+        <Input label="Cargo Description" placeholder="Industrial Machinery" value={formCargo} onChange={(e) => setFormCargo(e.target.value)} />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Revenue" type="number" placeholder="4200" value={formRevenue} onChange={(e) => setFormRevenue(e.target.value)} />
+          <Input label="Distance (km)" type="number" placeholder="568" value={formDistance} onChange={(e) => setFormDistance(e.target.value)} />
+        </div>
       </div>
     </Modal>
   );

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Truck, Users, Route, Wrench, Fuel, BarChart3, Settings, X, Truck as TruckIcon, ShieldCheck } from 'lucide-react';
-import { ROLE_PERMISSIONS, type ModuleKey, type Role } from '../../config/permissions';
+import { ROLE_PERMISSIONS, ROLE_DISPLAY_NAMES, type ModuleKey, type Role } from '../../config/permissions';
 import { authService } from '../../services/authService';
 
 interface SidebarProps {
@@ -70,7 +70,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         <div className="border-t border-slate-100 p-4">
           <div className="rounded-lg bg-slate-50 p-3">
             <p className="text-xs font-semibold text-slate-700">{user?.name ?? 'User'}</p>
-            <p className="mt-0.5 text-[11px] text-slate-500">{role}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{ROLE_DISPLAY_NAMES[role] ?? role}</p>
           </div>
         </div>
       </aside>

@@ -13,33 +13,67 @@ export default function FuelExpenses() {
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [tab, setTab] = useState<'expenses' | 'fuel'>('expenses');
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+
+  const [formDate, setFormDate] = useState('');
+  const [formCategory, setFormCategory] = useState<ExpenseCategory>('Fuel');
+  const [formDescription, setFormDescription] = useState('');
+  const [formVehicleId, setFormVehicleId] = useState('');
+  const [formAmount, setFormAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadData = async () => {
+    const [e, f, v] = await Promise.allSettled([
+      expenseService.getExpenses(),
+      expenseService.getFuelRecords(),
+      vehicleService.getVehicles(),
+    ]);
+    if (e.status === 'fulfilled') setExpenses(e.value);
+    if (f.status === 'fulfilled') setFuelRecords(f.value);
+    if (v.status === 'fulfilled') setVehicles(v.value);
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [e, f, v] = await Promise.all([
-          expenseService.getExpenses(),
-          expenseService.getFuelRecords(),
-          vehicleService.getVehicles(),
-        ]);
-        setExpenses(e);
-        setFuelRecords(f);
-        setVehicles(v);
-      } catch (err) {
-        console.error('Failed to load expenses:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+    loadData().finally(() => setLoading(false));
   }, []);
 
-  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const nonFuelExpenses = expenses.filter((e) => e.category !== 'Fuel');
+  const filteredExpenses = categoryFilter === 'All' ? nonFuelExpenses : nonFuelExpenses.filter((e) => e.category === categoryFilter);
+  const totalExpenses = nonFuelExpenses.reduce((s, e) => s + (e.amount || 0), 0);
   const totalFuelCost = expenses.filter((e) => e.category === 'Fuel').reduce((s, e) => s + (e.amount || 0), 0);
   const totalMaintenanceCost = expenses.filter((e) => e.category === 'Maintenance').reduce((s, e) => s + (e.amount || 0), 0);
   const avgFuelPerVehicle = fuelRecords.length > 0 ? fuelRecords.reduce((s, f) => s + (f.totalCost || 0), 0) / fuelRecords.length : 0;
 
   const vehiclePlate = (id: string | null) => vehicles.find((v) => v.id === id)?.plate ?? '—';
+
+  const resetForm = () => {
+    setFormDate('');
+    setFormCategory('Fuel');
+    setFormDescription('');
+    setFormVehicleId('');
+    setFormAmount('');
+  };
+
+  const handleCreate = async () => {
+    if (!formCategory || !formAmount) return;
+    setSubmitting(true);
+    try {
+      await expenseService.createExpense({
+        category: formCategory,
+        amount: Number(formAmount),
+        vehicle_id: formVehicleId ? Number(formVehicleId) : null,
+        description: formDescription,
+      });
+      resetForm();
+      setAddOpen(false);
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to create expense:', err);
+      alert(err.message || 'Failed to create expense');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -68,8 +102,16 @@ export default function FuelExpenses() {
         <button onClick={() => setTab('fuel')} className={`rounded-lg px-4 py-2 text-sm font-medium transition ${tab === 'fuel' ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Fuel Records</button>
       </div>
 
+      {tab === 'expenses' && (
+        <div className="flex items-center gap-2">
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 focus:outline-none">
+            {['All', 'Maintenance', 'Tolls', 'Insurance', 'Salaries', 'Other'].map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      )}
+
       {tab === 'expenses' ? (
-        <Card title="All Expenses" subtitle={`${expenses.length} records`}>
+        <Card title="Expenses" subtitle={`${filteredExpenses.length} records`}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -82,7 +124,7 @@ export default function FuelExpenses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {expenses.map((e) => (
+                {filteredExpenses.map((e) => (
                   <tr key={e.id} className="hover:bg-slate-50/70">
                     <td className="px-5 py-3.5 text-slate-600">{formatDate(e.date)}</td>
                     <td className="px-5 py-3.5"><Badge status={e.category} /></td>
@@ -128,28 +170,28 @@ export default function FuelExpenses() {
         </Card>
       )}
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Expense" size="lg"
-        footer={<><Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={() => setAddOpen(false)}>Add Expense</Button></>}>
+      <Modal open={addOpen} onClose={() => { setAddOpen(false); resetForm(); }} title="Add Expense" size="lg"
+        footer={<><Button variant="ghost" onClick={() => { setAddOpen(false); resetForm(); }}>Cancel</Button><Button onClick={handleCreate} disabled={submitting || !formCategory || !formAmount}>{submitting ? 'Adding...' : 'Add Expense'}</Button></>}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Date" type="date" />
+            <Input label="Date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Category</label>
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
-                {(['Fuel', 'Maintenance', 'Tolls', 'Insurance', 'Salaries', 'Other'] as ExpenseCategory[]).map((c) => <option key={c}>{c}</option>)}
+              <select value={formCategory} onChange={(e) => setFormCategory(e.target.value as ExpenseCategory)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+                {(['Fuel', 'Maintenance', 'Tolls', 'Insurance', 'Salaries', 'Other'] as ExpenseCategory[]).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
-          <Input label="Description" placeholder="Diesel refill - V-001" />
+          <Input label="Description" placeholder="Diesel refill - V-001" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Vehicle</label>
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
+              <select value={formVehicleId} onChange={(e) => setFormVehicleId(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/40">
                 <option value="">None</option>
                 {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate}</option>)}
               </select>
             </div>
-            <Input label="Amount" type="number" placeholder="640" />
+            <Input label="Amount" type="number" placeholder="640" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
           </div>
         </div>
       </Modal>

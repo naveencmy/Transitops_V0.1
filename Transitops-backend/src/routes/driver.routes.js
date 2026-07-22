@@ -9,8 +9,8 @@ const { driverCreateSchema, driverUpdateSchema } = require('../validators/driver
 
 router.use(authenticate);
 
-router.get('/', requireRoles(['SafetyOfficer', 'FleetManager', 'Admin']), driverController.getAll);
-router.get('/:id', requireRoles(['SafetyOfficer', 'FleetManager', 'Admin']), driverController.getById);
+router.get('/', requireRoles(['Dispatcher', 'SafetyOfficer', 'FleetManager', 'Admin']), driverController.getAll);
+router.get('/:id', requireRoles(['Dispatcher', 'SafetyOfficer', 'FleetManager', 'Admin']), driverController.getById);
 router.post('/', requireRoles(['SafetyOfficer', 'FleetManager', 'Admin']), validateBody(driverCreateSchema), driverController.create);
 router.put('/:id', requireRoles(['SafetyOfficer', 'FleetManager', 'Admin']), validateBody(driverUpdateSchema), driverController.update);
 router.delete('/:id', requireRoles(['SafetyOfficer', 'FleetManager', 'Admin']), driverController.delete);

@@ -9,8 +9,8 @@ const { vehicleCreateSchema, vehicleUpdateSchema } = require('../validators/vehi
 
 router.use(authenticate);
 
-router.get('/', requireRoles(['FleetManager', 'Admin']), vehicleController.getAll);
-router.get('/:id', requireRoles(['FleetManager', 'Admin']), vehicleController.getById);
+router.get('/', requireRoles(['Dispatcher', 'FleetManager', 'FinancialAnalyst', 'Admin']), vehicleController.getAll);
+router.get('/:id', requireRoles(['Dispatcher', 'FleetManager', 'FinancialAnalyst', 'Admin']), vehicleController.getById);
 router.post('/', requireRoles(['FleetManager', 'Admin']), validateBody(vehicleCreateSchema), vehicleController.create);
 router.put('/:id', requireRoles(['FleetManager', 'Admin']), validateBody(vehicleUpdateSchema), vehicleController.update);
 router.delete('/:id', requireRoles(['FleetManager', 'Admin']), vehicleController.delete);

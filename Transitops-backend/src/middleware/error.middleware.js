@@ -23,10 +23,12 @@ function formatValidationDetails(details) {
  * Must have 4 parameters to be recognized as error middleware
  */
 function errorHandler(err, req, res, next) {
-  // Log error
-  console.error(`[ERROR] ${err.name || 'Error'}: ${err.message}`);
-  if (env.isDevelopment() && err.stack) {
-    console.error(err.stack);
+  // Log error (skip 403 ForbiddenError — expected RBAC denials)
+  if (err.statusCode !== 403) {
+    console.error(`[ERROR] ${err.name || 'Error'}: ${err.message}`);
+    if (env.isDevelopment() && err.stack) {
+      console.error(err.stack);
+    }
   }
 
   // Operational errors (expected)

@@ -1,0 +1,64 @@
+{
+  "Comment": "TransitOps CloudFront Distribution",
+  "Origins": {
+    "Items": [
+      {
+        "Id": "s3-frontend",
+        "DomainName": "${s3Bucket}.s3.${region}.amazonaws.com",
+        "S3OriginConfig": {
+          "OriginAccessIdentity": "origin-access-identity/cloudfront/${oaiId}"
+        }
+      },
+      {
+        "Id": "api-gateway",
+        "DomainName": "${apiGatewayId}.execute-api.${region}.amazonaws.com",
+        "OriginPath": "/prod",
+        "CustomOriginConfig": {
+          "HTTPPort": 80,
+          "HTTPSPort": 443,
+          "OriginProtocolPolicy": "https-only"
+        }
+      }
+    ]
+  },
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "s3-frontend",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": { "Quantity": 2, "Items": ["GET", "HEAD"] },
+    "ForwardedValues": {
+      "QueryString": false,
+      "Cookies": { "Forward": "none" }
+    },
+    "MinTTL": 0,
+    "DefaultTTL": 86400,
+    "MaxTTL": 31536000,
+    "Compress": true
+  },
+  "CacheBehaviors": {
+    "Items": [
+      {
+        "PathPattern": "/api/*",
+        "TargetOriginId": "api-gateway",
+        "ViewerProtocolPolicy": "https-only",
+        "AllowedMethods": { "Quantity": 7, "Items": ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"] },
+        "ForwardedValues": {
+          "QueryString": true,
+          "Headers": { "Quantity": 2, "Items": ["Authorization", "Content-Type"] },
+          "Cookies": { "Forward": "all" }
+        },
+        "MinTTL": 0,
+        "DefaultTTL": 0,
+        "MaxTTL": 0
+      }
+    ]
+  },
+  "CustomErrorResponses": {
+    "Items": [
+      {
+        "ErrorCode": 404,
+        "ResponsePagePath": "/index.html",
+        "ResponseCode": 200
+      }
+    ]
+  }
+}

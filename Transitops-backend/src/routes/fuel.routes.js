@@ -13,7 +13,7 @@ router.use(authenticate);
 
 router.route('/logs')
   .get(
-    requireRoles([ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.DRIVER]), 
+    requireRoles([ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.FINANCIAL_ANALYST, ROLES.DRIVER]), 
     fuelExpenseController.getFuelLogs
   )
   .post(

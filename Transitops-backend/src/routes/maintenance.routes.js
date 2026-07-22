@@ -9,8 +9,8 @@ const { maintenanceCreateSchema, maintenanceUpdateSchema } = require('../validat
 
 router.use(authenticate);
 
-router.get('/', requireRoles(['FleetManager', 'Admin']), maintenanceController.getAll);
-router.get('/:id', requireRoles(['FleetManager', 'Admin']), maintenanceController.getById);
+router.get('/', requireRoles(['Dispatcher', 'FleetManager', 'Admin']), maintenanceController.getAll);
+router.get('/:id', requireRoles(['Dispatcher', 'FleetManager', 'Admin']), maintenanceController.getById);
 router.post('/', requireRoles(['FleetManager', 'Admin']), validateBody(maintenanceCreateSchema), maintenanceController.create);
 router.post('/:id/close', requireRoles(['FleetManager', 'Admin']), maintenanceController.close);
 router.put('/:id', requireRoles(['FleetManager', 'Admin']), validateBody(maintenanceUpdateSchema), maintenanceController.update);

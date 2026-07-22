@@ -58,16 +58,16 @@ const ROLES = {
 const ROLE_PERMISSIONS = {
   [ROLES.ADMIN]: ['*'],
   [ROLES.FLEET_MANAGER]: [
-    'dashboard', 'fleet', 'maintenance', 'vehicles', 'drivers', 'fuel', 'expenses', 'reports'
+    'dashboard', 'fleet', 'drivers', 'trips', 'maintenance', 'fuel', 'expenses', 'reports'
   ],
   [ROLES.DISPATCHER]: [
-    'dashboard', 'trips'
+    'dashboard', 'fleet', 'drivers', 'trips', 'maintenance'
   ],
   [ROLES.SAFETY_OFFICER]: [
-    'drivers'
+    'dashboard', 'drivers', 'compliance'
   ],
   [ROLES.FINANCIAL_ANALYST]: [
-    'expenses', 'reports'
+    'dashboard', 'expenses', 'reports'
   ],
   [ROLES.DRIVER]: [
     'fuel'
@@ -86,7 +86,8 @@ const ROUTE_MODULE_MAP = {
   '/api/v1/maintenance': 'maintenance',
   '/api/v1/fuel': 'fuel',
   '/api/v1/expenses': 'expenses',
-  '/api/v1/reports': 'reports'
+  '/api/v1/reports': 'reports',
+  '/api/v1/users': 'users'
 };
 
 module.exports = {
