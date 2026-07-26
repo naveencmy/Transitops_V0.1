@@ -3,11 +3,11 @@
 <div align="center">
 
 <!-- SHIELDS -->
-<a href="https://github.com/your-org/transitops/graphs/contributors"><img src="https://img.shields.io/github/contributors/your-org/transitops?color=%2300b4d8&style=for-the-badge" alt="contributors"></a>
-<a href="https://github.com/your-org/transitops/network/members"><img src="https://img.shields.io/github/forks/your-org/transitops?style=for-the-badge" alt="forks"></a>
-<a href="https://github.com/your-org/transitops/stargazers"><img src="https://img.shields.io/github/stars/your-org/transitops?style=for-the-badge" alt="stars"></a>
-<a href="https://github.com/your-org/transitops/issues"><img src="https://img.shields.io/github/issues/your-org/transitops?style=for-the-badge" alt="issues"></a>
-<a href="https://github.com/your-org/transitops/blob/main/LICENSE"><img src="https://img.shields.io/github/license/your-org/transitops?style=for-the-badge" alt="license"></a>
+<a href="https://github.com/naveencmy/Transitops_V0.1/graphs/contributors"><img src="https://img.shields.io/github/contributors/naveencmy/Transitops_V0.1?color=%2300b4d8&style=for-the-badge" alt="contributors"></a>
+<a href="https://github.com/naveencmy/Transitops_V0.1/network/members"><img src="https://img.shields.io/github/forks/naveencmy/Transitops_V0.1?style=for-the-badge" alt="forks"></a>
+<a href="https://github.com/naveencmy/Transitops_V0.1/stargazers"><img src="https://img.shields.io/github/stars/naveencmy/Transitops_V0.1?style=for-the-badge" alt="stars"></a>
+<a href="https://github.com/naveencmy/Transitops_V0.1/issues"><img src="https://img.shields.io/github/issues/naveencmy/Transitops_V0.1?style=for-the-badge" alt="issues"></a>
+<a href="https://github.com/naveencmy/Transitops_V0.1/blob/main/LICENSE"><img src="https://img.shields.io/github/license/naveencmy/Transitops_V0.1?style=for-the-badge" alt="license"></a>
 
 <!-- LOGO & TITLE -->
 <br />
